@@ -117,12 +117,13 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(sampleTasks);
   const [tab, setTab] = useState("all");
   const [filterMember, setFilterMember] = useState("all");
+  const [filterPriority, setFilterPriority] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [newComment, setNewComment] = useState("");
   const [showNewTask, setShowNewTask] = useState(false);
   const [newTask, setNewTask] = useState(emptyNewTask);
   const [dueDatePicker, setDueDatePicker] = useState<Date | undefined>();
-  // Inline edit states
   const [editDueTaskId, setEditDueTaskId] = useState<string | null>(null);
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
   const [inlineCommentTaskId, setInlineCommentTaskId] = useState<string | null>(null);
