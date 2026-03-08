@@ -18,7 +18,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
-  Plus, Calendar, User, AlertTriangle, CheckCircle2, Clock, Send, MoreHorizontal, CalendarIcon, Pencil, UserPlus, Flag, MessageSquare,
+  Plus, Calendar, User, AlertTriangle, CheckCircle2, Clock, Send, MoreHorizontal, CalendarIcon, Pencil, UserPlus, Flag, MessageSquare, Search,
 } from "lucide-react";
 
 interface Comment {
