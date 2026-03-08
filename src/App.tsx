@@ -9,6 +9,7 @@ import Clients from "./pages/Clients";
 import ClientProfile from "./pages/ClientProfile";
 import Deals from "./pages/Deals";
 import Tasks from "./pages/Tasks";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/clients/:id" element={<ClientProfile />} />
           <Route path="/deals" element={<Deals />} />
           <Route path="/tasks" element={<Tasks />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
