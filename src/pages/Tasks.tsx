@@ -10,8 +10,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import {
-  Plus, Calendar, User, AlertTriangle, CheckCircle2, Clock, Send,
+  Plus, Calendar, User, AlertTriangle, CheckCircle2, Clock, Send, MoreHorizontal, CalendarIcon, Pencil, UserPlus, Flag, MessageSquare,
 } from "lucide-react";
 
 interface Comment {
@@ -34,6 +41,11 @@ interface Task {
 
 const TODAY = "2026-03-08";
 const WEEK_START = "2026-03-02";
+
+const clients = ["BrightStar Media", "PixelForge Studios", "Zenith Brands", "Crescendo Digital", "NovaAd Co."];
+const teamMembers = ["Priya Sharma", "Arjun Kapoor"];
+const currentUserRole: "founder" | "member" = "founder";
+const currentUser = "Priya Sharma";
 
 const sampleTasks: Task[] = [
   {
@@ -86,8 +98,6 @@ const sampleTasks: Task[] = [
   },
 ];
 
-const teamMembers = [...new Set(sampleTasks.map((t) => t.assignee))];
-
 const priorityColor: Record<string, string> = {
   High: "bg-red-50 text-red-700 border-red-200",
   Medium: "bg-amber-50 text-amber-700 border-amber-200",
@@ -101,16 +111,27 @@ function categorize(task: Task): "overdue" | "today" | "upcoming" {
   return "upcoming";
 }
 
+const emptyNewTask = { name: "", description: "", client: "", assignee: "", dueDate: "", priority: "Medium" as "High" | "Medium" | "Low" };
+
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(sampleTasks);
   const [tab, setTab] = useState("all");
   const [filterMember, setFilterMember] = useState("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [newTask, setNewTask] = useState(emptyNewTask);
+  const [dueDatePicker, setDueDatePicker] = useState<Date | undefined>();
+  // Inline edit states
+  const [editDueTaskId, setEditDueTaskId] = useState<string | null>(null);
+  const [editDueDate, setEditDueDate] = useState<Date | undefined>();
+  const [inlineCommentTaskId, setInlineCommentTaskId] = useState<string | null>(null);
+  const [inlineComment, setInlineComment] = useState("");
 
   const filtered = useMemo(() => {
     let list = tasks;
-    if (tab === "my") list = list.filter((t) => t.assignee === "Priya Sharma");
+    if (currentUserRole === "member") list = list.filter((t) => t.assignee === currentUser);
+    if (tab === "my") list = list.filter((t) => t.assignee === currentUser);
     if (filterMember !== "all") list = list.filter((t) => t.assignee === filterMember);
     return list;
   }, [tasks, tab, filterMember]);
@@ -127,10 +148,56 @@ export default function Tasks() {
 
   const addComment = () => {
     if (!newComment.trim() || !selectedTask) return;
-    const comment: Comment = { author: "You", date: TODAY, text: newComment.trim() };
+    const comment: Comment = { author: currentUser, date: TODAY, text: newComment.trim() };
     setTasks((prev) => prev.map((t) => t.id === selectedTask.id ? { ...t, comments: [...t.comments, comment] } : t));
     setSelectedTask((s) => s ? { ...s, comments: [...s.comments, comment] } : null);
     setNewComment("");
+  };
+
+  const handleCreateTask = () => {
+    if (!newTask.name.trim()) return;
+    const task: Task = {
+      id: String(Date.now()),
+      name: newTask.name,
+      description: newTask.description,
+      client: newTask.client,
+      assignee: newTask.assignee || currentUser,
+      dueDate: dueDatePicker ? format(dueDatePicker, "yyyy-MM-dd") : TODAY,
+      priority: newTask.priority,
+      completed: false,
+      comments: [],
+    };
+    setTasks((prev) => [...prev, task]);
+    setNewTask(emptyNewTask);
+    setDueDatePicker(undefined);
+    setShowNewTask(false);
+  };
+
+  const reassignTask = (taskId: string, newAssignee: string) => {
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, assignee: newAssignee } : t));
+    if (selectedTask?.id === taskId) setSelectedTask((s) => s ? { ...s, assignee: newAssignee } : null);
+  };
+
+  const changePriority = (taskId: string, priority: "High" | "Medium" | "Low") => {
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, priority } : t));
+    if (selectedTask?.id === taskId) setSelectedTask((s) => s ? { ...s, priority } : null);
+  };
+
+  const updateDueDate = (taskId: string, date: Date) => {
+    const formatted = format(date, "yyyy-MM-dd");
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, dueDate: formatted } : t));
+    if (selectedTask?.id === taskId) setSelectedTask((s) => s ? { ...s, dueDate: formatted } : null);
+    setEditDueTaskId(null);
+    setEditDueDate(undefined);
+  };
+
+  const addInlineComment = (taskId: string) => {
+    if (!inlineComment.trim()) return;
+    const comment: Comment = { author: currentUser, date: TODAY, text: inlineComment.trim() };
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, comments: [...t.comments, comment] } : t));
+    if (selectedTask?.id === taskId) setSelectedTask((s) => s ? { ...s, comments: [...s.comments, comment] } : null);
+    setInlineComment("");
+    setInlineCommentTaskId(null);
   };
 
   const TaskRow = ({ task }: { task: Task }) => {
@@ -158,6 +225,44 @@ export default function Tasks() {
           <Calendar className="h-3 w-3" /> {task.dueDate}
         </div>
         <Badge variant="outline" className={`text-[10px] shrink-0 ${priorityColor[task.priority]}`}>{task.priority}</Badge>
+
+        {/* Three-dot menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><UserPlus className="h-3.5 w-3.5 mr-2" /> Reassign</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {teamMembers.map((m) => (
+                  <DropdownMenuItem key={m} onClick={() => reassignTask(task.id, m)}>
+                    {m} {task.assignee === m && <span className="ml-auto text-xs text-muted-foreground">current</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><Flag className="h-3.5 w-3.5 mr-2" /> Priority</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {(["High", "Medium", "Low"] as const).map((p) => (
+                  <DropdownMenuItem key={p} onClick={() => changePriority(task.id, p)}>
+                    <span className={`inline-block h-2 w-2 rounded-full mr-2 ${p === "High" ? "bg-red-500" : p === "Medium" ? "bg-amber-500" : "bg-emerald-500"}`} />
+                    {p} {task.priority === p && <span className="ml-auto text-xs text-muted-foreground">current</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem onClick={() => { setEditDueTaskId(task.id); setEditDueDate(new Date(task.dueDate)); }}>
+              <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Due Date
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setInlineCommentTaskId(task.id); }}>
+              <MessageSquare className="h-3.5 w-3.5 mr-2" /> Add Comment
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   };
@@ -178,7 +283,7 @@ export default function Tasks() {
           <h1 className="text-2xl font-semibold text-foreground">Tasks</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Manage and track team tasks</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 self-start">
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 self-start" onClick={() => setShowNewTask(true)}>
           <Plus className="h-4 w-4" /> New Task
         </Button>
       </div>
@@ -265,6 +370,112 @@ export default function Tasks() {
           <div className="p-8 text-center text-sm text-muted-foreground">No tasks found</div>
         )}
       </Card>
+
+      {/* Edit Due Date Dialog */}
+      <Dialog open={!!editDueTaskId} onOpenChange={(open) => { if (!open) setEditDueTaskId(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Due Date</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <CalendarComponent
+              mode="single"
+              selected={editDueDate}
+              onSelect={(d) => { if (d && editDueTaskId) updateDueDate(editDueTaskId, d); }}
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline Comment Dialog */}
+      <Dialog open={!!inlineCommentTaskId} onOpenChange={(open) => { if (!open) { setInlineCommentTaskId(null); setInlineComment(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Comment</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder="Write your comment..."
+            value={inlineComment}
+            onChange={(e) => setInlineComment(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <div className="flex justify-end">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => inlineCommentTaskId && addInlineComment(inlineCommentTaskId)}>
+              Add Comment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Task Dialog */}
+      <Dialog open={showNewTask} onOpenChange={setShowNewTask}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Task Name</Label>
+              <Input placeholder="Enter task name" value={newTask.name} onChange={(e) => setNewTask((s) => ({ ...s, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea placeholder="Describe the task..." value={newTask.description} onChange={(e) => setNewTask((s) => ({ ...s, description: e.target.value }))} className="min-h-[70px]" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Linked Client</Label>
+                <Select value={newTask.client} onValueChange={(v) => setNewTask((s) => ({ ...s, client: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Assign To</Label>
+                <Select value={newTask.assignee} onValueChange={(v) => setNewTask((s) => ({ ...s, assignee: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dueDatePicker && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDatePicker ? format(dueDatePicker, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent mode="single" selected={dueDatePicker} onSelect={setDueDatePicker} initialFocus className={cn("p-3 pointer-events-auto")} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Priority</Label>
+                <Select value={newTask.priority} onValueChange={(v) => setNewTask((s) => ({ ...s, priority: v as "High" | "Medium" | "Low" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreateTask}>Save Task</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Task detail side panel */}
       <Sheet open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
