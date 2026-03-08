@@ -135,6 +135,9 @@ export default function Tasks() {
     if (currentUserRole === "member") list = list.filter((t) => t.assignee === currentUser);
     if (tab === "my") list = list.filter((t) => t.assignee === currentUser);
     if (filterMember !== "all") list = list.filter((t) => t.assignee === filterMember);
+    if (filterPriority !== "all") list = list.filter((t) => t.priority === filterPriority);
+    if (filterStatus === "completed") list = list.filter((t) => t.completed);
+    else if (filterStatus === "active") list = list.filter((t) => !t.completed);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((t) =>
@@ -145,7 +148,7 @@ export default function Tasks() {
       );
     }
     return list;
-  }, [tasks, tab, filterMember, searchQuery]);
+  }, [tasks, tab, filterMember, filterPriority, filterStatus, searchQuery]);
 
   const overdue = filtered.filter((t) => !t.completed && t.dueDate < TODAY);
   const dueToday = filtered.filter((t) => !t.completed && t.dueDate === TODAY);
