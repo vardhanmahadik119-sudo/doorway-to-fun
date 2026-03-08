@@ -127,14 +127,24 @@ export default function Tasks() {
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
   const [inlineCommentTaskId, setInlineCommentTaskId] = useState<string | null>(null);
   const [inlineComment, setInlineComment] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = useMemo(() => {
     let list = tasks;
     if (currentUserRole === "member") list = list.filter((t) => t.assignee === currentUser);
     if (tab === "my") list = list.filter((t) => t.assignee === currentUser);
     if (filterMember !== "all") list = list.filter((t) => t.assignee === filterMember);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.client.toLowerCase().includes(q) ||
+        t.assignee.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q)
+      );
+    }
     return list;
-  }, [tasks, tab, filterMember]);
+  }, [tasks, tab, filterMember, searchQuery]);
 
   const overdue = filtered.filter((t) => !t.completed && t.dueDate < TODAY);
   const dueToday = filtered.filter((t) => !t.completed && t.dueDate === TODAY);
