@@ -3,28 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Clock, AlertTriangle, FolderOpen } from "lucide-react";
 
 const stats = [
-  { label: "Active Clients", value: "24", icon: Users, change: "+3 this month" },
-  { label: "Pending Approvals", value: "8", icon: Clock, change: "2 urgent" },
-  { label: "Overdue Follow-ups", value: "5", icon: AlertTriangle, change: "3 this week" },
-  { label: "Open Deals", value: "12", icon: FolderOpen, change: "$340K pipeline" },
+  { label: "Active Clients", value: "0", icon: Users },
+  { label: "Pending Approvals", value: "0", icon: Clock },
+  { label: "Overdue Follow-ups", value: "0", icon: AlertTriangle },
+  { label: "Open Deals", value: "0", icon: FolderOpen },
 ];
-
-const recentActivity = [
-  { client: "Apex Media Group", action: "Contract signed", time: "12 min ago", status: "completed" },
-  { client: "Bright Ads Co.", action: "Proposal sent", time: "1 hr ago", status: "pending" },
-  { client: "ClearView Digital", action: "Follow-up overdue", time: "3 hrs ago", status: "overdue" },
-  { client: "Delta Brands", action: "Meeting scheduled", time: "5 hrs ago", status: "upcoming" },
-  { client: "Echo Campaigns", action: "Invoice paid", time: "Yesterday", status: "completed" },
-  { client: "Frontier Agency", action: "Brief submitted", time: "Yesterday", status: "pending" },
-  { client: "GrowthPath Inc.", action: "Campaign launched", time: "2 days ago", status: "completed" },
-];
-
-const statusStyles: Record<string, string> = {
-  completed: "bg-emerald-50 text-emerald-700",
-  pending: "bg-amber-50 text-amber-700",
-  overdue: "bg-red-50 text-red-700",
-  upcoming: "bg-blue-50 text-blue-700",
-};
 
 const Dashboard = () => {
   return (
