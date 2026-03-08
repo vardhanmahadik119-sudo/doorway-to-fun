@@ -18,7 +18,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
-  Plus, Calendar, User, AlertTriangle, CheckCircle2, Clock, Send, MoreHorizontal, CalendarIcon, Pencil, UserPlus, Flag, MessageSquare,
+  Plus, Calendar, User, AlertTriangle, CheckCircle2, Clock, Send, MoreHorizontal, CalendarIcon, Pencil, UserPlus, Flag, MessageSquare, Search,
 } from "lucide-react";
 
 interface Comment {
@@ -127,14 +127,24 @@ export default function Tasks() {
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
   const [inlineCommentTaskId, setInlineCommentTaskId] = useState<string | null>(null);
   const [inlineComment, setInlineComment] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = useMemo(() => {
     let list = tasks;
     if (currentUserRole === "member") list = list.filter((t) => t.assignee === currentUser);
     if (tab === "my") list = list.filter((t) => t.assignee === currentUser);
     if (filterMember !== "all") list = list.filter((t) => t.assignee === filterMember);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.client.toLowerCase().includes(q) ||
+        t.assignee.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q)
+      );
+    }
     return list;
-  }, [tasks, tab, filterMember]);
+  }, [tasks, tab, filterMember, searchQuery]);
 
   const overdue = filtered.filter((t) => !t.completed && t.dueDate < TODAY);
   const dueToday = filtered.filter((t) => !t.completed && t.dueDate === TODAY);
@@ -323,6 +333,17 @@ export default function Tasks() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search tasks by name, client, team member, or description…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 h-10 bg-background border-border"
+        />
       </div>
 
       {/* Filters */}
