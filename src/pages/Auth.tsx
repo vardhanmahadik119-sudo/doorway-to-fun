@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import logo from "@/assets/logo.png";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,9 +26,10 @@ const Auth = () => {
       <div className="w-full max-w-[380px]">
         {/* Logo / Brand */}
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            S
-          </div>
+          <img src={logo} alt="Logo" className="mx-auto mb-3 h-12 w-12 rounded-lg" />
+          <p className="mb-4 text-sm font-medium tracking-wide text-muted-foreground uppercase">
+            Centralize your workspace
+          </p>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
             {isLogin ? "Sign in to your account" : "Create your account"}
           </h1>
