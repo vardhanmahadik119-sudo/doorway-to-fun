@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { SignOutButton } from "@clerk/react";
 import logo from "@/assets/logo.png";
 import {
   Sidebar,
@@ -97,10 +98,12 @@ export function AppSidebar() {
             </SidebarMenuItem>
           ))}
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Log out" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-              <LogOut className="h-4 w-4" />
-              {!collapsed && <span>Log out</span>}
-            </SidebarMenuButton>
+            <SignOutButton>
+              <SidebarMenuButton tooltip="Log out" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <LogOut className="h-4 w-4" />
+                {!collapsed && <span>Log out</span>}
+              </SidebarMenuButton>
+            </SignOutButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
