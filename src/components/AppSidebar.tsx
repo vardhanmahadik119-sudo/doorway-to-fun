@@ -1,12 +1,4 @@
-import {
-  LayoutDashboard,
-  Users,
-  FolderOpen,
-  CalendarCheck,
-  BarChart3,
-  Settings,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, Users, FolderOpen, CalendarCheck, ChartBar as BarChart3, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { SignOutButton } from "@clerk/react";
