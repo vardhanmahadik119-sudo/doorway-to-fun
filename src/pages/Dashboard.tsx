@@ -36,9 +36,6 @@ const Dashboard = () => {
                 <div className="text-2xl font-semibold text-foreground">
                   {stat.value}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {stat.change}
-                </p>
               </CardContent>
             </Card>
           ))}
@@ -51,34 +48,10 @@ const Dashboard = () => {
               Recent Client Activity
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {recentActivity.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between px-6 py-3.5"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {item.client}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.action}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[item.status]}`}
-                    >
-                      {item.status}
-                    </span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap w-20 text-right">
-                      {item.time}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <CardContent>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No recent activity yet.
+            </p>
           </CardContent>
         </Card>
       </div>
