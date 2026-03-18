@@ -49,6 +49,62 @@ const RootRedirect = () => {
   return <Navigate to={isSignedIn ? "/dashboard" : "/auth"} replace />;
 };
 
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<RootRedirect />} />
+    <Route path="/auth" element={<Auth />} />
+    <Route
+      path="/dashboard"
+      element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/clients"
+      element={
+        <ProtectedRoute>
+          <Clients />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/clients/:id"
+      element={
+        <ProtectedRoute>
+          <ClientProfile />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/deals"
+      element={
+        <ProtectedRoute>
+          <Deals />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/tasks"
+      element={
+        <ProtectedRoute>
+          <Tasks />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/reports"
+      element={
+        <ProtectedRoute>
+          <Reports />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -56,59 +112,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ClerkProvider publishableKey={clerkPubKey}>
-          <Routes>
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clients"
-              element={
-                <ProtectedRoute>
-                  <Clients />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clients/:id"
-              element={
-                <ProtectedRoute>
-                  <ClientProfile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/deals"
-              element={
-                <ProtectedRoute>
-                  <Deals />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <Tasks />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </ClerkProvider>
       </BrowserRouter>
     </TooltipProvider>
