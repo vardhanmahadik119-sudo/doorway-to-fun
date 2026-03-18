@@ -39,6 +39,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const RootRedirect = () => {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  }
+
+  return <Navigate to={isSignedIn ? "/dashboard" : "/auth"} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -47,7 +57,7 @@ const App = () => (
       <BrowserRouter>
         <ClerkProvider publishableKey={clerkPubKey}>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<RootRedirect />} />
             <Route path="/auth" element={<Auth />} />
             <Route
               path="/dashboard"

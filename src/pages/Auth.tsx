@@ -29,6 +29,7 @@ const Auth = () => {
             routing="path"
             path="/auth"
             signUpUrl="/auth"
+            redirectUrl="/dashboard"
           />
         </div>
       </div>
