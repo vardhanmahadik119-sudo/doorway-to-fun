@@ -105,18 +105,34 @@ const AppRoutes = () => (
   </Routes>
 );
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ClerkProvider publishableKey={clerkPubKey}>
-          <AppRoutes />
-        </ClerkProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  if (!clerkPubKey) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold mb-2">Configuration Required</h1>
+          <p className="text-muted-foreground">Please set VITE_CLERK_PUBLISHABLE_KEY in your environment variables.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ClerkProvider 
+            publishableKey={clerkPubKey}
+            afterSignOutUrl="/auth"
+          >
+            <AppRoutes />
+          </ClerkProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
