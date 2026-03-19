@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-route
 import { ClerkProvider, useAuth } from "@clerk/react";
 import { useEffect } from "react";
 import Auth from "./pages/Auth";
+import SsoCallback from "./pages/SsoCallback";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientProfile from "./pages/ClientProfile";
@@ -49,6 +50,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/sso-callback" element={<SsoCallback />} />
             <Route
               path="/dashboard"
               element={
