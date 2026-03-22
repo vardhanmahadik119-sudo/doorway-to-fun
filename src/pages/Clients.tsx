@@ -49,8 +49,98 @@ const statusConfig: Record<ClientStatus, { label: string; className: string }> =
   },
 };
 
-// Empty array — no mock data
-const clients: Client[] = [];
+const clients: Client[] = [
+  {
+    id: "brightline-foods",
+    name: "Brightline Foods",
+    primaryContact: "Priya Nair (CMO)",
+    accountManager: "Alex Kim",
+    status: "active",
+    monthlyValue: 485000,
+    lastActivity: "2h ago",
+  },
+  {
+    id: "vertex-labs",
+    name: "Vertex Labs",
+    primaryContact: "Rahul Mehta",
+    accountManager: "Jordan Lee",
+    status: "at-risk",
+    monthlyValue: 320000,
+    lastActivity: "6d ago",
+  },
+  {
+    id: "northwind-media",
+    name: "Northwind Media",
+    primaryContact: "Ananya Desai",
+    accountManager: "Sam Rivera",
+    status: "active",
+    monthlyValue: 275000,
+    lastActivity: "1d ago",
+  },
+  {
+    id: "harbor-co",
+    name: "Harbor & Co.",
+    primaryContact: "Vikram Singh",
+    accountManager: "Alex Kim",
+    status: "active",
+    monthlyValue: 198000,
+    lastActivity: "3h ago",
+  },
+  {
+    id: "oak-street-retail",
+    name: "Oak Street Retail",
+    primaryContact: "Meera Iyer",
+    accountManager: "Jordan Lee",
+    status: "at-risk",
+    monthlyValue: 156000,
+    lastActivity: "12d ago",
+  },
+  {
+    id: "monsoon-digital",
+    name: "Monsoon Digital",
+    primaryContact: "Arjun Kapoor",
+    accountManager: "Sam Rivera",
+    status: "active",
+    monthlyValue: 412000,
+    lastActivity: "5h ago",
+  },
+  {
+    id: "catalyst-sports",
+    name: "Catalyst Sports",
+    primaryContact: "Neha Sharma",
+    accountManager: "Alex Kim",
+    status: "active",
+    monthlyValue: 640000,
+    lastActivity: "Yesterday",
+  },
+  {
+    id: "silverline-hospitality",
+    name: "Silverline Hospitality",
+    primaryContact: "Karan Malhotra",
+    accountManager: "Jordan Lee",
+    status: "churned",
+    monthlyValue: 0,
+    lastActivity: "45d ago",
+  },
+  {
+    id: "pixel-grove",
+    name: "Pixel Grove Studios",
+    primaryContact: "Sana Khan",
+    accountManager: "Sam Rivera",
+    status: "active",
+    monthlyValue: 225000,
+    lastActivity: "4d ago",
+  },
+  {
+    id: "blue-peak-fintech",
+    name: "Blue Peak Fintech",
+    primaryContact: "Dev Patel",
+    accountManager: "Alex Kim",
+    status: "active",
+    monthlyValue: 890000,
+    lastActivity: "30m ago",
+  },
+];
 
 const Clients = () => {
   const navigate = useNavigate();
