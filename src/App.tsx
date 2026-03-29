@@ -10,9 +10,12 @@ import SsoCallback from "./pages/SsoCallback";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientProfile from "./pages/ClientProfile";
-import Deals from "./pages/Deals";
+import Pipeline from "./pages/Pipeline";
 import Tasks from "./pages/Tasks";
 import Reports from "./pages/Reports";
+import ClientReports from "./pages/ClientReports";
+import Settings from "./pages/Settings";
+import SharedReport from "./pages/SharedReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,10 +79,10 @@ const App = () => (
               }
             />
             <Route
-              path="/deals"
+              path="/pipeline"
               element={
                 <ProtectedRoute>
-                  <Deals />
+                  <Pipeline />
                 </ProtectedRoute>
               }
             />
@@ -99,6 +102,23 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/client-reports"
+              element={
+                <ProtectedRoute>
+                  <ClientReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/shared-report/:id" element={<SharedReport />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </ClerkProvider>

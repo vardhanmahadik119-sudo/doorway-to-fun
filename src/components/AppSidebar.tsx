@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FolderOpen, CalendarCheck, ChartBar as BarChart3, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, FolderOpen, CalendarCheck, ChartBar as BarChart3, ClipboardList, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { SignOutButton } from "@clerk/react";
@@ -18,12 +18,10 @@ import {
 const mainNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Clients", url: "/clients", icon: Users },
-  { title: "Deals", url: "/deals", icon: FolderOpen },
+  { title: "Pipeline", url: "/pipeline", icon: FolderOpen },
   { title: "Tasks", url: "/tasks", icon: CalendarCheck },
   { title: "Reports", url: "/reports", icon: BarChart3 },
-];
-
-const bottomNav = [
+  { title: "Client Reports", url: "/client-reports", icon: ClipboardList },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
@@ -74,21 +72,6 @@ export function AppSidebar() {
 
       <SidebarFooter className="px-2 pb-4">
         <SidebarMenu>
-          {bottomNav.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild tooltip={item.title}>
-                <NavLink
-                  to={item.url}
-                  end
-                  className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                >
-                  <item.icon className="h-4 w-4" />
-                  {!collapsed && <span>{item.title}</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
           <SidebarMenuItem>
             <SignOutButton>
               <SidebarMenuButton tooltip="Log out" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">

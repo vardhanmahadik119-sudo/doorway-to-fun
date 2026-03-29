@@ -8,7 +8,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Phone, Mail, Calendar, User, IndianRupee, TrendingUp, Clock, StickyNote, LayoutGrid, List, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Plus, Phone, Mail, Calendar, User, IndianRupee, TrendingUp, Clock, StickyNote, LayoutGrid, List, Search, ArrowUp, ArrowDown, X } from "lucide-react";
 
 interface Deal {
   id: string;
@@ -25,17 +28,40 @@ interface Deal {
   notes: string;
   lastActivity: string;
   activity: { date: string; text: string }[];
+  leadSource?: string;
 }
 
-const stages = ["Lead", "Proposal Sent", "Negotiating", "Closed Won", "Closed Lost"];
+interface LeadSource {
+  id: string;
+  name: string;
+  conversionRate: number;
+  color: string;
+}
+
+const stages = [
+  { name: "Leads", color: "blue" },
+  { name: "Proposal Sent", color: "yellow" },
+  { name: "Negotiating", color: "purple" },
+  { name: "Closed Won", color: "green" },
+  { name: "Closed Lost", color: "red" }
+];
+
+const stageColors = {
+  "Leads": { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", header: "bg-blue-100" },
+  "Proposal Sent": { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", header: "bg-yellow-100" },
+  "Negotiating": { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", header: "bg-purple-100" },
+  "Closed Won": { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", header: "bg-green-100" },
+  "Closed Lost": { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", header: "bg-red-100" }
+};
 
 const sampleDeals: Deal[] = [
   {
     id: "1", agency: "BrightStar Media", value: 450000, contact: "Rahul Mehta",
     contactEmail: "rahul@brightstar.in", contactPhone: "+91 98765 43210",
-    expectedClose: "2026-03-25", accountManager: "Priya Sharma", stage: "Lead",
+    expectedClose: "2026-03-25", accountManager: "Priya Sharma", stage: "Leads",
     probability: 20, nextFollowUp: "2026-03-10", lastActivity: "2026-03-07",
     notes: "Interested in social media management package.",
+    leadSource: "Google Ads",
     activity: [
       { date: "2026-03-07", text: "Initial discovery call completed" },
       { date: "2026-03-05", text: "Inbound enquiry via website" },
@@ -47,6 +73,7 @@ const sampleDeals: Deal[] = [
     expectedClose: "2026-04-10", accountManager: "Arjun Kapoor", stage: "Proposal Sent",
     probability: 45, nextFollowUp: "2026-03-12", lastActivity: "2026-03-06",
     notes: "Proposal sent for full-service digital campaigns. Awaiting feedback.",
+    leadSource: "Website Contact Form",
     activity: [
       { date: "2026-03-06", text: "Proposal document shared via email" },
       { date: "2026-03-03", text: "Requirements gathering meeting" },
@@ -58,6 +85,7 @@ const sampleDeals: Deal[] = [
     expectedClose: "2026-03-30", accountManager: "Priya Sharma", stage: "Negotiating",
     probability: 70, nextFollowUp: "2026-03-09", lastActivity: "2026-03-08",
     notes: "Negotiating on quarterly retainer terms. Close to finalising.",
+    leadSource: "Referral",
     activity: [
       { date: "2026-03-08", text: "Counter-proposal received" },
       { date: "2026-03-05", text: "Pricing discussion call" },
@@ -70,6 +98,7 @@ const sampleDeals: Deal[] = [
     expectedClose: "2026-02-28", accountManager: "Arjun Kapoor", stage: "Closed Won",
     probability: 100, nextFollowUp: "", lastActivity: "2026-02-28",
     notes: "Deal closed. Onboarding scheduled for next week.",
+    leadSource: "Phone Calls",
     activity: [
       { date: "2026-02-28", text: "Contract signed" },
       { date: "2026-02-25", text: "Final terms agreed" },
@@ -81,6 +110,7 @@ const sampleDeals: Deal[] = [
     expectedClose: "2026-03-01", accountManager: "Priya Sharma", stage: "Closed Lost",
     probability: 0, nextFollowUp: "", lastActivity: "2026-03-01",
     notes: "Lost to competitor on pricing.",
+    leadSource: "WhatsApp",
     activity: [
       { date: "2026-03-01", text: "Deal marked as lost" },
       { date: "2026-02-27", text: "Client chose competitor" },
@@ -111,7 +141,7 @@ function formatMonth(ym: string) {
 
 type SortKey = "agency" | "value" | "stage" | "accountManager" | "expectedClose" | "lastActivity";
 
-export default function Deals() {
+export default function Pipeline() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [filterAM, setFilterAM] = useState("all");
   const [filterMonth, setFilterMonth] = useState("all");
@@ -119,6 +149,17 @@ export default function Deals() {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("agency");
   const [sortAsc, setSortAsc] = useState(true);
+  const [leadSources, setLeadSources] = useState<LeadSource[]>([
+    { id: "1", name: "Google Ads", conversionRate: 12, color: "#4285F4" },
+    { id: "2", name: "Google Analytics", conversionRate: 8, color: "#FF6D00" },
+    { id: "3", name: "WhatsApp", conversionRate: 22, color: "#25D366" },
+    { id: "4", name: "Phone Calls", conversionRate: 18, color: "#10B981" },
+    { id: "5", name: "Website Contact Form", conversionRate: 15, color: "#6366F1" },
+    { id: "6", name: "Referral", conversionRate: 35, color: "#8B5CF6" },
+  ]);
+  const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
+  const [newSourceName, setNewSourceName] = useState("");
+  const [newSourceConversionRate, setNewSourceConversionRate] = useState("");
 
   const filtered = useMemo(() => {
     let deals = sampleDeals;
@@ -153,6 +194,44 @@ export default function Deals() {
     deal.agency.toLowerCase().includes(searchLower) || deal.contact.toLowerCase().includes(searchLower)
   );
 
+  const handleAddLeadSource = () => {
+    if (newSourceName.trim() && newSourceConversionRate.trim()) {
+      const newSource: LeadSource = {
+        id: Date.now().toString(),
+        name: newSourceName.trim(),
+        conversionRate: parseFloat(newSourceConversionRate),
+        color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+      };
+      setLeadSources([...leadSources, newSource]);
+      setNewSourceName("");
+      setNewSourceConversionRate("");
+      setShowAddSourceDialog(false);
+    }
+  };
+
+  const calculateConversionRate = (fromStage: string, toStage: string) => {
+    const fromDeals = filtered.filter(d => d.stage === fromStage);
+    const toDeals = filtered.filter(d => d.stage === toStage);
+    if (fromDeals.length === 0) return 0;
+    return Math.round((toDeals.length / fromDeals.length) * 100);
+  };
+
+  const getLeadSourceData = () => {
+    const sourceCount: Record<string, number> = {};
+    filtered.forEach(deal => {
+      if (deal.leadSource) {
+        sourceCount[deal.leadSource] = (sourceCount[deal.leadSource] || 0) + 1;
+      }
+    });
+    
+    return leadSources.map(source => ({
+      name: source.name,
+      value: sourceCount[source.name] || 0,
+      conversionRate: source.conversionRate,
+      color: source.color
+    })).filter(item => item.value > 0);
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc);
     else { setSortKey(key); setSortAsc(true); }
@@ -168,7 +247,7 @@ export default function Deals() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Deals Pipeline</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Pipeline</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Track and manage your sales pipeline</p>
         </div>
         <div className="flex items-center gap-2 self-start">
@@ -240,43 +319,177 @@ export default function Deals() {
 
       {/* Kanban View */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {stages.map((stage) => {
-            const deals = filtered.filter((d) => d.stage === stage);
-            return (
-              <div key={stage} className="min-w-[260px] flex-1 flex flex-col max-h-[calc(100vh-280px)]">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">{stage}</h3>
-                  <Badge variant="secondary" className="text-xs">{deals.length}</Badge>
-                </div>
-                <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-                  {deals.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-                      No deals
+        <>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {stages.map((stage) => {
+              const deals = filtered.filter((d) => d.stage === stage.name);
+              const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
+              const conversionRate = stage.name === "Closed Lost" ? 0 : 
+                stage.name === "Closed Won" ? calculateConversionRate("Negotiating", "Closed Won") :
+                stage.name === "Negotiating" ? calculateConversionRate("Proposal Sent", "Negotiating") :
+                stage.name === "Proposal Sent" ? calculateConversionRate("Leads", "Proposal Sent") : 0;
+              
+              const colors = stageColors[stage.name];
+              
+              return (
+                <div key={stage.name} className="min-w-[280px] flex-1 flex flex-col max-h-[calc(100vh-280px)]">
+                  <div className={`${colors.header} rounded-t-lg p-3 border ${colors.border}`}>
+                    <h3 className={`text-sm font-semibold ${colors.text}`}>{stage.name}</h3>
+                    <div className="flex items-center justify-between mt-2">
+                      <Badge variant="secondary" className="text-xs">{deals.length} deals</Badge>
+                      <span className={`text-xs font-medium ${colors.text}`}>{formatINR(totalValue)}</span>
                     </div>
-                  )}
-                  {deals.map((deal) => (
-                    <Card
-                      key={deal.id}
-                      className={`cursor-pointer hover:shadow-md transition-shadow border-border ${isHighlighted(deal) ? "ring-2 ring-blue-400 shadow-md" : ""}`}
-                      onClick={() => setSelectedDeal(deal)}
-                    >
-                      <CardContent className="p-4 space-y-2.5">
-                        <p className="font-semibold text-sm text-foreground leading-tight">{deal.agency}</p>
-                        <p className="text-lg font-bold text-foreground">{formatINR(deal.value)}</p>
-                        <div className="space-y-1 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {deal.contact}</div>
-                          <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Close: {deal.expectedClose}</div>
-                        </div>
-                        <Badge variant="outline" className="text-[10px] font-normal">{deal.accountManager}</Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
+                    {conversionRate > 0 && (
+                      <div className="mt-2">
+                        <span className={`text-xs ${colors.text}`}>Conversion: {conversionRate}%</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className={`space-y-3 overflow-y-auto flex-1 p-3 border ${colors.border} border-t-0 ${colors.bg} rounded-b-lg`}>
+                    {deals.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+                        No deals
+                      </div>
+                    )}
+                    {deals.map((deal) => (
+                      <Card
+                        key={deal.id}
+                        className={`cursor-pointer hover:shadow-md transition-shadow border-border ${isHighlighted(deal) ? "ring-2 ring-blue-400 shadow-md" : ""}`}
+                        onClick={() => setSelectedDeal(deal)}
+                      >
+                        <CardContent className="p-4 space-y-2.5">
+                          <p className="font-semibold text-sm text-foreground leading-tight">{deal.agency}</p>
+                          <p className="text-lg font-bold text-foreground">{formatINR(deal.value)}</p>
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5"><User className="h-3 w-3" /> {deal.contact}</div>
+                            <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Close: {deal.expectedClose}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {deal.leadSource && (
+                              <Badge variant="secondary" className="text-[10px] font-normal">
+                                {deal.leadSource}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-[10px] font-normal">{deal.accountManager}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+          
+          {/* Lead Sources Section */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Lead Sources</h2>
+              <Dialog open={showAddSourceDialog} onOpenChange={setShowAddSourceDialog}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5">
+                    <Plus className="h-4 w-4" /> Add Lead Source
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Lead Source</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="source-name">Source Name</Label>
+                      <Input
+                        id="source-name"
+                        placeholder="e.g., Instagram, Referral, Cold Outreach"
+                        value={newSourceName}
+                        onChange={(e) => setNewSourceName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="conversion-rate">Conversion Rate (%)</Label>
+                      <Input
+                        id="conversion-rate"
+                        type="number"
+                        placeholder="e.g., 25"
+                        value={newSourceConversionRate}
+                        onChange={(e) => setNewSourceConversionRate(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleAddLeadSource} className="bg-blue-600 hover:bg-blue-700 text-white">
+                        Add Source
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowAddSourceDialog(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-border">
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-medium text-foreground mb-4">Lead Distribution</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={getLeadSourceData()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry) => `${entry.name}: ${entry.value}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {getLeadSourceData().map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload as any;
+                            return (
+                              <div className="bg-background border border-border rounded p-2">
+                                <p className="text-sm font-medium">{data.name}</p>
+                                <p className="text-xs text-muted-foreground">Leads: {data.value}</p>
+                                <p className="text-xs text-muted-foreground">Conversion Rate: {data.conversionRate}%</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-border">
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-medium text-foreground mb-4">Lead Source Details</h3>
+                  <div className="space-y-3">
+                    {getLeadSourceData().map((source) => (
+                      <div key={source.name} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
+                          <span className="text-sm font-medium text-foreground">{source.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-foreground">{source.value} leads</p>
+                          <p className="text-xs text-muted-foreground">{source.conversionRate}% conversion</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
       )}
 
       {/* List View */}

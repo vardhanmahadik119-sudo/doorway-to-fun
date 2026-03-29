@@ -310,6 +310,7 @@ const Dashboard = () => {
     from: subDays(new Date(), 14),
     to: new Date(),
   }));
+  const [razorpayConnected, setRazorpayConnected] = useState(false);
 
   const [pipelineView, setPipelineView] = useState<"funnel" | "kanban">("funnel");
 
@@ -328,13 +329,26 @@ const Dashboard = () => {
   const chartColor = trendUp ? "#16a34a" : "#dc2626";
 
   const invoiceSummary = useMemo(() => {
-    if (revenuePreset === "custom" && revenueCustom?.from && revenueCustom?.to) {
-      const f = customRangeFactor(revenueCustom.from, revenueCustom.to);
-      return scaleInvoiceSummary(invoiceSummaryByPreset.month, f);
+    const baseSummary = revenuePreset === "custom" && revenueCustom?.from && revenueCustom?.to
+      ? (() => {
+          const f = customRangeFactor(revenueCustom.from, revenueCustom.to);
+          return scaleInvoiceSummary(invoiceSummaryByPreset.month, f);
+        })()
+      : revenuePreset === "custom"
+      ? invoiceSummaryByPreset.month
+      : invoiceSummaryByPreset[revenuePreset];
+
+    // Add Razorpay payments if connected
+    if (razorpayConnected) {
+      const razorpayPayments = 45000; // Simulated Razorpay payment amount
+      return {
+        ...baseSummary,
+        paid: baseSummary.paid + razorpayPayments,
+      };
     }
-    if (revenuePreset === "custom") return invoiceSummaryByPreset.month;
-    return invoiceSummaryByPreset[revenuePreset];
-  }, [revenuePreset, revenueCustom]);
+
+    return baseSummary;
+  }, [revenuePreset, revenueCustom, razorpayConnected]);
 
   const healthRows = useMemo(() => {
     if (healthPreset === "custom" && healthCustom?.from && healthCustom?.to) {
@@ -513,6 +527,17 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
+
+              {razorpayConnected && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-green-800 font-medium">
+                      Razorpay payments automatically included in paid invoices
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>
