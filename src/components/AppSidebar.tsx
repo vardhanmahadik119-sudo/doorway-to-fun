@@ -1,7 +1,6 @@
 import { LayoutDashboard, Users, FolderOpen, CalendarCheck, ChartBar as BarChart3, ClipboardList, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
-import { SignOutButton } from "@clerk/react";
 import logo from "@/assets/logo.png";
 import {
   Sidebar,
@@ -73,12 +72,10 @@ export function AppSidebar() {
       <SidebarFooter className="px-2 pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SignOutButton>
-              <SidebarMenuButton tooltip="Log out" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <LogOut className="h-4 w-4" />
-                {!collapsed && <span>Log out</span>}
-              </SidebarMenuButton>
-            </SignOutButton>
+            <SidebarMenuButton tooltip="Log out" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <LogOut className="h-4 w-4" />
+              {!collapsed && <span>Log out</span>}
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
