@@ -1,6 +1,4 @@
-import { useMemo, useState } from "react";
-import { format, subDays, subMonths, eachDayOfInterval, eachWeekOfInterval, startOfMonth, endOfMonth } from "date-fns";
-import type { DateRange } from "react-day-picker";
+import { useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,582 +9,391 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
+  Cell,
   FunnelChart,
   Funnel,
   LabelList,
 } from "recharts";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
-  LineChart as LineChartIcon,
-  BarChart3,
-  Filter,
+  TrendingUp,
+  TrendingDown,
+  IndianRupee,
+  Users,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
   LayoutGrid,
-  CalendarRange,
+  Filter,
 } from "lucide-react";
 
-type DatePreset = "week" | "month" | "quarter" | "custom";
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+const revenueData = [
+  { month: "Apr", revenue: 1850000, target: 2000000 },
+  { month: "May", revenue: 2100000, target: 2100000 },
+  { month: "Jun", revenue: 1980000, target: 2200000 },
+  { month: "Jul", revenue: 2350000, target: 2300000 },
+  { month: "Aug", revenue: 2600000, target: 2400000 },
+  { month: "Sep", revenue: 2450000, target: 2500000 },
+  { month: "Oct", revenue: 2800000, target: 2600000 },
+  { month: "Nov", revenue: 3100000, target: 2800000 },
+  { month: "Dec", revenue: 3350000, target: 3000000 },
+  { month: "Jan", revenue: 3200000, target: 3200000 },
+  { month: "Feb", revenue: 3580000, target: 3400000 },
+  { month: "Mar", revenue: 4280000, target: 3600000 },
+];
+
+const invoiceStats = [
+  { label: "Invoices Sent", amount: 4280000, icon: IndianRupee, color: "blue", trend: "+18%", trendUp: true },
+  { label: "Invoices Paid", amount: 3520000, icon: CheckCircle2, color: "green", trend: "+22%", trendUp: true },
+  { label: "Invoices Overdue", amount: 435000, icon: AlertCircle, color: "red", trend: "-5%", trendUp: false },
+];
+
+const pipelineStages = [
+  { name: "Lead", deals: 18, value: 4250000, conversion: 61, fill: "#3b82f6" },
+  { name: "Proposal Sent", deals: 11, value: 2600000, conversion: 72, fill: "#8b5cf6" },
+  { name: "Negotiating", deals: 8, value: 1875000, conversion: 75, fill: "#f59e0b" },
+  { name: "Closed Won", deals: 6, value: 1410000, conversion: null, fill: "#10b981" },
+  { name: "Closed Lost", deals: 4, value: 940000, conversion: null, fill: "#ef4444" },
+];
+
+const clientHealthData = [
+  {
+    name: "BrightStar Media",
+    manager: "Priya Sharma",
+    completed: 24,
+    pending: 3,
+    health: "Healthy" as const,
+  },
+  {
+    name: "PixelForge Studios",
+    manager: "Rahul Mehta",
+    completed: 18,
+    pending: 7,
+    health: "At Risk" as const,
+  },
+  {
+    name: "Zenith Brands",
+    manager: "Ananya Iyer",
+    completed: 31,
+    pending: 2,
+    health: "Healthy" as const,
+  },
+  {
+    name: "Crescendo Digital",
+    manager: "Vikram Nair",
+    completed: 9,
+    pending: 12,
+    health: "Critical" as const,
+  },
+  {
+    name: "NovaAd Co.",
+    manager: "Deepika Rao",
+    completed: 22,
+    pending: 4,
+    health: "Healthy" as const,
+  },
+];
+
+const kanbanDeals: Record<string, { client: string; value: number }[]> = {
+  Lead: [
+    { client: "Apex Ventures", value: 850000 },
+    { client: "SkyLine Corp", value: 620000 },
+    { client: "Orbit Media", value: 480000 },
+  ],
+  "Proposal Sent": [
+    { client: "BrightStar Media", value: 940000 },
+    { client: "Fusion Labs", value: 720000 },
+  ],
+  Negotiating: [
+    { client: "Zenith Brands", value: 1100000 },
+    { client: "NovaTech", value: 775000 },
+  ],
+  "Closed Won": [
+    { client: "PixelForge Studios", value: 550000 },
+    { client: "ClearPath Inc.", value: 860000 },
+  ],
+  "Closed Lost": [
+    { client: "Meridian Co.", value: 430000 },
+    { client: "BluePeak Fintech", value: 510000 },
+  ],
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatInr = (n: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(n);
+
+const formatInrFull = (n: number) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(n);
 
-const formatInrCompact = (n: number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    notation: n >= 100000 ? "compact" : "standard",
-    maximumFractionDigits: 1,
-  }).format(n);
-
-/* ─── Revenue: invoice summaries by preset (₹) ─── */
-const invoiceSummaryByPreset: Record<
-  Exclude<DatePreset, "custom">,
-  { sent: number; paid: number; overdue: number }
-> = {
-  week: { sent: 8_40_000, paid: 6_15_000, overdue: 1_25_000 },
-  month: { sent: 42_80_000, paid: 35_20_000, overdue: 4_35_000 },
-  quarter: { sent: 1_18_50_000, paid: 98_40_000, overdue: 12_60_000 },
+const healthConfig = {
+  Healthy: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  "At Risk": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  Critical: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
 };
 
-function scaleInvoiceSummary(
-  base: { sent: number; paid: number; overdue: number },
-  factor: number,
-) {
-  const f = Math.max(0.15, Math.min(2.5, factor));
-  return {
-    sent: Math.round(base.sent * f),
-    paid: Math.round(base.paid * f),
-    overdue: Math.round(base.overdue * f),
-  };
-}
-
-function buildRevenuePoints(
-  preset: DatePreset,
-  custom: DateRange | undefined,
-): { label: string; revenue: number }[] {
-  const today = new Date();
-
-  if (preset === "week") {
-    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, i) => ({
-      label,
-      revenue: 65_000 + i * 18_000 + (i % 3) * 12_000,
-    }));
-  }
-
-  if (preset === "month") {
-    return ["W1", "W2", "W3", "W4"].map((label, i) => ({
-      label,
-      revenue: 8_20_000 + i * 95_000 + (i % 2) * 40_000,
-    }));
-  }
-
-  if (preset === "quarter") {
-    return ["Jan", "Feb", "Mar"].map((label, i) => ({
-      label,
-      revenue: 36_00_000 + i * 4_20_000,
-    }));
-  }
-
-  const from = custom?.from ?? subDays(today, 14);
-  const to = custom?.to ?? today;
-  const days = eachDayOfInterval({ start: from, end: to });
-  if (days.length <= 14) {
-    return days.map((d, i) => ({
-      label: format(d, "d MMM"),
-      revenue: 72_000 + (i * 11_700) % 95_000 + (i % 4) * 8_000,
-    }));
-  }
-  const weeks = eachWeekOfInterval({ start: from, end: to }, { weekStartsOn: 1 });
-  return weeks.map((w, i) => ({
-    label: format(w, "d MMM"),
-    revenue: 4_80_000 + i * 62_000 + (i % 3) * 35_000,
-  }));
-}
-
-function revenueTrendUp(series: { revenue: number }[]): boolean {
-  if (series.length < 2) return true;
-  const mid = Math.floor(series.length / 2);
-  const a = series.slice(0, mid);
-  const b = series.slice(mid);
-  const avgA = a.reduce((s, p) => s + p.revenue, 0) / a.length;
-  const avgB = b.reduce((s, p) => s + p.revenue, 0) / b.length;
-  return avgB >= avgA;
-}
-
-function customRangeFactor(from: Date, to: Date): number {
-  const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000));
-  return days / 30;
-}
-
-/* ─── Pipeline ─── */
-const pipelineStages = [
-  {
-    key: "lead",
-    label: "Lead",
-    count: 18,
-    value: 42_50_000,
-    conversionNext: 61,
-    funnelFill: "#1e3a5f",
-  },
-  {
-    key: "proposal",
-    label: "Proposal Sent",
-    count: 11,
-    value: 38_20_000,
-    conversionNext: 58,
-    funnelFill: "#2563eb",
-  },
-  {
-    key: "negotiating",
-    label: "Negotiating",
-    count: 7,
-    value: 31_60_000,
-    conversionNext: 64,
-    funnelFill: "#3b82f6",
-  },
-  {
-    key: "won",
-    label: "Closed Won",
-    count: 5,
-    value: 24_80_000,
-    conversionNext: null as number | null,
-    funnelFill: "#16a34a",
-  },
-  {
-    key: "lost",
-    label: "Closed Lost",
-    count: 4,
-    value: 9_40_000,
-    conversionNext: null,
-    funnelFill: "#94a3b8",
-  },
-] as const;
-
-type StageKey = (typeof pipelineStages)[number]["key"];
-
-const kanbanDeals: { id: string; name: string; value: number; stage: StageKey }[] = [
-  { id: "d1", name: "Brightline Foods — H2 retainer", value: 18_50_000, stage: "negotiating" },
-  { id: "d2", name: "Vertex Labs — performance", value: 12_40_000, stage: "proposal" },
-  { id: "d3", name: "Northwind — brand refresh", value: 8_90_000, stage: "lead" },
-  { id: "d4", name: "Harbor & Co. — launch sprint", value: 6_20_000, stage: "lead" },
-  { id: "d5", name: "Monsoon Digital — always-on", value: 22_00_000, stage: "won" },
-  { id: "d6", name: "Catalyst Sports — TV + digital", value: 15_60_000, stage: "proposal" },
-  { id: "d7", name: "Pixel Grove — social package", value: 4_80_000, stage: "lead" },
-  { id: "d8", name: "Blue Peak — fintech compliance", value: 28_00_000, stage: "negotiating" },
-  { id: "d9", name: "Oak Street — local retail", value: 3_20_000, stage: "lost" },
-  { id: "d10", name: "Silverline — event series", value: 5_50_000, stage: "lost" },
-  { id: "d11", name: "Coastal Media — podcast", value: 2_90_000, stage: "proposal" },
-  { id: "d12", name: "Urban Rail Ads — OOH", value: 9_10_000, stage: "lead" },
-  { id: "d13", name: "Helix Bio — webinar funnel", value: 7_70_000, stage: "negotiating" },
-  { id: "d14", name: "Metro Finance — content", value: 11_20_000, stage: "won" },
-  { id: "d15", name: "Studio 9 — pilot", value: 1_80_000, stage: "lost" },
-];
-
-const funnelChartData = pipelineStages.map((s) => ({
-  name: s.label,
-  value: s.count,
-  fill: s.funnelFill,
-}));
-
-/* ─── Client health: task stats & retention by preset ─── */
-const healthMetricsByPreset: Record<
-  Exclude<DatePreset, "custom">,
-  { retention: number; churn: number }
-> = {
-  week: { retention: 96.2, churn: 3.8 },
-  month: { retention: 93.5, churn: 6.5 },
-  quarter: { retention: 91.0, churn: 9.0 },
+const kanbanColors: Record<string, string> = {
+  Lead: "#3b82f6",
+  "Proposal Sent": "#8b5cf6",
+  Negotiating: "#f59e0b",
+  "Closed Won": "#10b981",
+  "Closed Lost": "#ef4444",
 };
 
-const clientTaskRowsByPreset: Record<
-  Exclude<DatePreset, "custom">,
-  { client: string; accountManager: string; completed: number; pending: number }[]
-> = {
-  week: [
-    { client: "Brightline Foods", accountManager: "Alex Kim", completed: 14, pending: 2 },
-    { client: "Vertex Labs", accountManager: "Jordan Lee", completed: 6, pending: 8 },
-    { client: "Northwind Media", accountManager: "Sam Rivera", completed: 11, pending: 3 },
-    { client: "Harbor & Co.", accountManager: "Alex Kim", completed: 9, pending: 4 },
-    { client: "Blue Peak Fintech", accountManager: "Alex Kim", completed: 16, pending: 1 },
-    { client: "Oak Street Retail", accountManager: "Jordan Lee", completed: 3, pending: 11 },
-    { client: "Silverline Hospitality", accountManager: "Jordan Lee", completed: 1, pending: 6 },
-    { client: "Pixel Grove Studios", accountManager: "Sam Rivera", completed: 10, pending: 2 },
-  ],
-  month: [
-    { client: "Brightline Foods", accountManager: "Alex Kim", completed: 52, pending: 6 },
-    { client: "Vertex Labs", accountManager: "Jordan Lee", completed: 38, pending: 14 },
-    { client: "Northwind Media", accountManager: "Sam Rivera", completed: 44, pending: 9 },
-    { client: "Harbor & Co.", accountManager: "Alex Kim", completed: 41, pending: 7 },
-    { client: "Blue Peak Fintech", accountManager: "Alex Kim", completed: 58, pending: 4 },
-    { client: "Oak Street Retail", accountManager: "Jordan Lee", completed: 22, pending: 28 },
-    { client: "Silverline Hospitality", accountManager: "Jordan Lee", completed: 8, pending: 19 },
-    { client: "Pixel Grove Studios", accountManager: "Sam Rivera", completed: 47, pending: 5 },
-    { client: "Monsoon Digital", accountManager: "Sam Rivera", completed: 51, pending: 3 },
-    { client: "Catalyst Sports", accountManager: "Alex Kim", completed: 49, pending: 5 },
-  ],
-  quarter: [
-    { client: "Brightline Foods", accountManager: "Alex Kim", completed: 156, pending: 12 },
-    { client: "Vertex Labs", accountManager: "Jordan Lee", completed: 118, pending: 32 },
-    { client: "Northwind Media", accountManager: "Sam Rivera", completed: 142, pending: 18 },
-    { client: "Harbor & Co.", accountManager: "Alex Kim", completed: 128, pending: 15 },
-    { client: "Blue Peak Fintech", accountManager: "Alex Kim", completed: 168, pending: 9 },
-    { client: "Oak Street Retail", accountManager: "Jordan Lee", completed: 64, pending: 58 },
-    { client: "Silverline Hospitality", accountManager: "Jordan Lee", completed: 24, pending: 48 },
-    { client: "Pixel Grove Studios", accountManager: "Sam Rivera", completed: 139, pending: 11 },
-    { client: "Monsoon Digital", accountManager: "Sam Rivera", completed: 151, pending: 8 },
-    { client: "Catalyst Sports", accountManager: "Alex Kim", completed: 148, pending: 10 },
-  ],
-};
+type DateFilter = "week" | "month" | "quarter" | "custom";
+type ChartType = "line" | "bar";
+type PipelineView = "funnel" | "kanban";
 
-function interpolateTasks(
-  rows: { client: string; accountManager: string; completed: number; pending: number }[],
-  factor: number,
-) {
-  const f = Math.max(0.25, Math.min(3, factor));
-  return rows.map((r) => ({
-    ...r,
-    completed: Math.max(0, Math.round(r.completed * f)),
-    pending: Math.max(0, Math.round(r.pending * f)),
-  }));
-}
-
-function completionRate(completed: number, pending: number): number {
-  const t = completed + pending;
-  if (t === 0) return 1;
-  return completed / t;
-}
-
-type HealthLabel = "Healthy" | "At risk" | "Churned";
-
-function healthFromRate(rate: number): HealthLabel {
-  if (rate >= 0.75) return "Healthy";
-  if (rate >= 0.4) return "At risk";
-  return "Churned";
-}
-
-const healthBadgeClass: Record<HealthLabel, string> = {
-  Healthy: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  "At risk": "bg-amber-50 text-amber-900 border-amber-200",
-  Churned: "bg-red-50 text-red-800 border-red-200",
-};
-
-const ChartTooltip = ({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: { value: number }[];
-}) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-md border bg-background px-2.5 py-1.5 text-xs shadow-md">
-      <span className="font-medium tabular-nums">{formatInr(payload[0].value)}</span>
-    </div>
-  );
-};
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const Dashboard = () => {
-  const [chartType, setChartType] = useState<"line" | "bar">("line");
-  const [revenuePreset, setRevenuePreset] = useState<DatePreset>("month");
-  const [revenueCustom, setRevenueCustom] = useState<DateRange | undefined>(() => ({
-    from: subDays(new Date(), 14),
-    to: new Date(),
+  const [chartType, setChartType] = useState<ChartType>("line");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("month");
+  const [pipelineView, setPipelineView] = useState<PipelineView>("funnel");
+
+  const funnelData = pipelineStages.map((s) => ({
+    value: s.deals,
+    name: s.name,
+    fill: s.fill,
   }));
-  const [razorpayConnected, setRazorpayConnected] = useState(false);
-
-  const [pipelineView, setPipelineView] = useState<"funnel" | "kanban">("funnel");
-
-  const [healthPreset, setHealthPreset] = useState<DatePreset>("month");
-  const [healthCustom, setHealthCustom] = useState<DateRange | undefined>(() => ({
-    from: startOfMonth(subMonths(new Date(), 1)),
-    to: endOfMonth(new Date()),
-  }));
-
-  const revenueSeries = useMemo(
-    () => buildRevenuePoints(revenuePreset, revenueCustom),
-    [revenuePreset, revenueCustom],
-  );
-
-  const trendUp = useMemo(() => revenueTrendUp(revenueSeries), [revenueSeries]);
-  const chartColor = trendUp ? "#16a34a" : "#dc2626";
-
-  const invoiceSummary = useMemo(() => {
-    const baseSummary = revenuePreset === "custom" && revenueCustom?.from && revenueCustom?.to
-      ? (() => {
-          const f = customRangeFactor(revenueCustom.from, revenueCustom.to);
-          return scaleInvoiceSummary(invoiceSummaryByPreset.month, f);
-        })()
-      : revenuePreset === "custom"
-      ? invoiceSummaryByPreset.month
-      : invoiceSummaryByPreset[revenuePreset];
-
-    // Add Razorpay payments if connected
-    if (razorpayConnected) {
-      const razorpayPayments = 45000; // Simulated Razorpay payment amount
-      return {
-        ...baseSummary,
-        paid: baseSummary.paid + razorpayPayments,
-      };
-    }
-
-    return baseSummary;
-  }, [revenuePreset, revenueCustom, razorpayConnected]);
-
-  const healthRows = useMemo(() => {
-    if (healthPreset === "custom" && healthCustom?.from && healthCustom?.to) {
-      const days = Math.max(
-        1,
-        Math.ceil((healthCustom.to.getTime() - healthCustom.from.getTime()) / 86400000),
-      );
-      const f = days / 30;
-      return interpolateTasks(clientTaskRowsByPreset.month, f);
-    }
-    if (healthPreset === "custom") return clientTaskRowsByPreset.month;
-    return clientTaskRowsByPreset[healthPreset];
-  }, [healthPreset, healthCustom]);
-
-  const healthKpis = useMemo(() => {
-    if (healthPreset === "custom" && healthCustom?.from && healthCustom?.to) {
-      const f = customRangeFactor(healthCustom.from, healthCustom.to);
-      const base = healthMetricsByPreset.month;
-      const churn = Math.min(22, Math.max(2, base.churn * (0.88 + Math.min(f, 1.2) * 0.06)));
-      return { retention: Math.round((100 - churn) * 10) / 10, churn: Math.round(churn * 10) / 10 };
-    }
-    if (healthPreset === "custom") return healthMetricsByPreset.month;
-    return healthMetricsByPreset[healthPreset];
-  }, [healthPreset, healthCustom]);
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1400px] space-y-10 pb-10">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Founder dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            AdFlow CRM — revenue, pipeline, and client health at a glance.
-          </p>
+      <div className="max-w-[1400px] space-y-8 pb-12">
+
+        {/* ── Header ─────────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Founder dashboard</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Revenue, pipeline, and client health at a glance</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Chart toggle */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <button
+                onClick={() => setChartType("line")}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                  chartType === "line" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Line
+              </button>
+              <button
+                onClick={() => setChartType("bar")}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                  chartType === "bar" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Bar
+              </button>
+            </div>
+
+            {/* Date filters */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
+              {(["week", "month", "quarter"] as DateFilter[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setDateFilter(f)}
+                  className={`px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+                    dateFilter === f ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {f === "week" ? "This week" : f === "month" ? "This month" : "This quarter"}
+                </button>
+              ))}
+              <button
+                onClick={() => setDateFilter("custom")}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1 ${
+                  dateFilter === "custom" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Filter className="h-3 w-3" />
+                Custom
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* ── Section 1: Revenue ── */}
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Revenue
-            </h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <ToggleGroup
-                type="single"
-                value={chartType}
-                onValueChange={(v) => v && setChartType(v as "line" | "bar")}
-                variant="outline"
-                size="sm"
-                className="justify-start"
-              >
-                <ToggleGroupItem value="line" aria-label="Line chart" className="gap-1.5 px-3">
-                  <LineChartIcon className="h-3.5 w-3.5" />
-                  Line
-                </ToggleGroupItem>
-                <ToggleGroupItem value="bar" aria-label="Bar chart" className="gap-1.5 px-3">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Bar
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <ToggleGroup
-                type="single"
-                value={revenuePreset}
-                onValueChange={(v) => v && setRevenuePreset(v as DatePreset)}
-                variant="outline"
-                size="sm"
-                className="justify-start"
-              >
-                <ToggleGroupItem value="week" className="text-xs sm:text-sm">
-                  This week
-                </ToggleGroupItem>
-                <ToggleGroupItem value="month" className="text-xs sm:text-sm">
-                  This month
-                </ToggleGroupItem>
-                <ToggleGroupItem value="quarter" className="text-xs sm:text-sm">
-                  This quarter
-                </ToggleGroupItem>
-                <ToggleGroupItem value="custom" className="text-xs sm:text-sm">
-                  Custom
-                </ToggleGroupItem>
-              </ToggleGroup>
-              {revenuePreset === "custom" && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <CalendarRange className="h-3.5 w-3.5" />
-                      {revenueCustom?.from && revenueCustom?.to
-                        ? `${format(revenueCustom.from, "d MMM")} – ${format(revenueCustom.to, "d MMM yyyy")}`
-                        : "Select range"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="range"
-                      numberOfMonths={2}
-                      selected={revenueCustom}
-                      onSelect={setRevenueCustom}
-                      defaultMonth={revenueCustom?.from}
+        {/* ── Revenue chart ──────────────────────────────────────────────── */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-gray-900">Revenue overview</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-xs text-gray-500 mr-3">Actual</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                <span className="text-xs text-gray-500">Target</span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                {chartType === "line" ? (
+                  <LineChart data={revenueData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => formatInr(v)}
                     />
-                  </PopoverContent>
-                </Popover>
-              )}
+                    <Tooltip formatter={(v: number) => [formatInrFull(v)]} />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{ r: 5 }}
+                      name="Revenue"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="target"
+                      stroke="#d1d5db"
+                      strokeWidth={1.5}
+                      strokeDasharray="5 5"
+                      dot={false}
+                      name="Target"
+                    />
+                  </LineChart>
+                ) : (
+                  <BarChart data={revenueData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => formatInr(v)}
+                    />
+                    <Tooltip formatter={(v: number) => [formatInrFull(v)]} />
+                    <Legend />
+                    <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={36} name="Revenue" />
+                    <Bar dataKey="target" fill="#e5e7eb" radius={[4, 4, 0, 0]} maxBarSize={36} name="Target" />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+
+            {/* Invoice stat cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
+              {invoiceStats.map((stat) => (
+                <div key={stat.label} className="flex items-center gap-4">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 ${
+                      stat.color === "blue"
+                        ? "bg-blue-50"
+                        : stat.color === "green"
+                          ? "bg-emerald-50"
+                          : "bg-red-50"
+                    }`}
+                  >
+                    <stat.icon
+                      className={`h-5 w-5 ${
+                        stat.color === "blue"
+                          ? "text-blue-600"
+                          : stat.color === "green"
+                            ? "text-emerald-600"
+                            : "text-red-500"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{stat.label}</p>
+                    <p className="text-lg font-bold text-gray-900 tabular-nums">{formatInrFull(stat.amount)}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {stat.trendUp ? (
+                        <TrendingUp className="h-3 w-3 text-emerald-500" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-400" />
+                      )}
+                      <span
+                        className={`text-xs font-medium ${stat.trendUp ? "text-emerald-600" : "text-red-500"}`}
+                      >
+                        {stat.trend} vs last period
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Pipeline overview ──────────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Pipeline overview</h2>
+              <p className="text-sm text-gray-500">Deal stages and conversion rates</p>
+            </div>
+            <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <button
+                onClick={() => setPipelineView("funnel")}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  pipelineView === "funnel" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Filter className="h-3.5 w-3.5" />
+                Funnel
+              </button>
+              <button
+                onClick={() => setPipelineView("kanban")}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  pipelineView === "kanban" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Kanban
+              </button>
             </div>
           </div>
 
-          <Card className="shadow-none border">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-                <span
-                  className={cn(
-                    "inline-flex h-2 w-2 rounded-full",
-                    trendUp ? "bg-emerald-500" : "bg-red-500",
-                  )}
-                />
-                {trendUp ? "Revenue trending up" : "Revenue trending down"} — chart uses{" "}
-                {trendUp ? "green" : "red"} for the series.
-              </div>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  {chartType === "line" ? (
-                    <LineChart data={revenueSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                      <YAxis
-                        tick={{ fontSize: 11 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => formatInrCompact(Number(v))}
-                        width={72}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke={chartColor}
-                        strokeWidth={2}
-                        dot={{ fill: chartColor, r: 3 }}
-                        activeDot={{ r: 5 }}
-                      />
-                    </LineChart>
-                  ) : (
-                    <BarChart data={revenueSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                      <YAxis
-                        tick={{ fontSize: 11 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => formatInrCompact(Number(v))}
-                        width={72}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="revenue" fill={chartColor} radius={[4, 4, 0, 0]} maxBarSize={48} />
-                    </BarChart>
-                  )}
-                </ResponsiveContainer>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mt-6">
-                {(
-                  [
-                    { label: "Invoices sent", value: invoiceSummary.sent },
-                    { label: "Invoices paid", value: invoiceSummary.paid },
-                    { label: "Invoices overdue", value: invoiceSummary.overdue },
-                  ] as const
-                ).map((card) => (
-                  <div
-                    key={card.label}
-                    className="rounded-lg border bg-muted/30 px-4 py-3 flex flex-col gap-1"
-                  >
-                    <span className="text-xs font-medium text-muted-foreground">{card.label}</span>
-                    <span className="text-lg font-semibold tabular-nums tracking-tight">
-                      {formatInr(card.value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {razorpayConnected && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-green-800 font-medium">
-                      Razorpay payments automatically included in paid invoices
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* ── Section 2: Pipeline ── */}
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Pipeline overview
-            </h2>
-            <ToggleGroup
-              type="single"
-              value={pipelineView}
-              onValueChange={(v) => v && setPipelineView(v as "funnel" | "kanban")}
-              variant="outline"
-              size="sm"
-            >
-              <ToggleGroupItem value="funnel" className="gap-1.5 px-3">
-                <Filter className="h-3.5 w-3.5" />
-                Funnel
-              </ToggleGroupItem>
-              <ToggleGroupItem value="kanban" className="gap-1.5 px-3">
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Kanban
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-
           {pipelineView === "funnel" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-              <Card className="shadow-none border lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Funnel chart */}
+              <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">Deal funnel</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-gray-700">Deal funnel</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[320px] w-full">
+                  <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <FunnelChart margin={{ top: 16, right: 48, bottom: 16, left: 16 }}>
+                      <FunnelChart>
                         <Tooltip
-                          formatter={(value: number) => [`${value} deals`, "Count"]}
-                          labelFormatter={(name) => name}
+                          formatter={(value: number, name: string) => [`${value} deals`, name]}
                         />
-                        <Funnel dataKey="value" data={funnelChartData} isAnimationActive>
+                        <Funnel dataKey="value" data={funnelData} isAnimationActive>
+                          {funnelData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
                           <LabelList
                             position="right"
-                            fill="hsl(var(--foreground))"
+                            fill="#374151"
                             stroke="none"
-                            fontSize={11}
-                            formatter={(v: number) => `${v}`}
+                            dataKey="name"
+                            style={{ fontSize: 12, fontWeight: 500 }}
                           />
                         </Funnel>
                       </FunnelChart>
@@ -594,192 +401,180 @@ const Dashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="shadow-none border lg:col-span-3">
+
+              {/* Pipeline table */}
+              <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">Stages & conversion</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-gray-700">Stage breakdown</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Stage</TableHead>
-                        <TableHead className="text-right">Deals</TableHead>
-                        <TableHead className="text-right">Total value</TableHead>
-                        <TableHead className="text-right">To next stage</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pipelineStages.map((s, i) => (
-                        <TableRow key={s.key}>
-                          <TableCell className="font-medium">{s.label}</TableCell>
-                          <TableCell className="text-right tabular-nums">{s.count}</TableCell>
-                          <TableCell className="text-right tabular-nums">{formatInr(s.value)}</TableCell>
-                          <TableCell className="text-right text-muted-foreground text-sm">
-                            {s.conversionNext != null && pipelineStages[i + 1]
-                              ? `${s.conversionNext}% → ${pipelineStages[i + 1].label}`
-                              : "—"}
-                          </TableCell>
-                        </TableRow>
+                <CardContent className="px-0">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-2.5 px-6 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                          Stage
+                        </th>
+                        <th className="text-right py-2.5 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                          Deals
+                        </th>
+                        <th className="text-right py-2.5 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                          Total Value
+                        </th>
+                        <th className="text-right py-2.5 px-6 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                          Conversion
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pipelineStages.map((stage, i) => (
+                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                          <td className="py-3 px-6">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.fill }} />
+                              <span className="font-medium text-gray-900">{stage.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right tabular-nums text-gray-700">{stage.deals}</td>
+                          <td className="py-3 px-4 text-right tabular-nums text-gray-700">
+                            {formatInrFull(stage.value)}
+                          </td>
+                          <td className="py-3 px-6 text-right">
+                            {stage.conversion != null ? (
+                              <span className="text-gray-700 font-medium">{stage.conversion}% →</span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 </CardContent>
               </Card>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-              {pipelineStages.map((stage) => {
-                const deals = kanbanDeals.filter((d) => d.stage === stage.key);
-                return (
-                  <Card key={stage.key} className="shadow-none border flex flex-col min-h-[280px]">
-                    <CardHeader className="pb-2 space-y-1">
-                      <CardTitle className="text-sm font-semibold leading-tight">{stage.label}</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        {deals.length} deals · {formatInr(deals.reduce((s, d) => s + d.value, 0))}
-                      </p>
-                      {stage.conversionNext != null && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {stage.conversionNext}% move to next stage
-                        </p>
-                      )}
-                    </CardHeader>
-                    <CardContent className="flex-1 space-y-2 overflow-y-auto max-h-[220px] pt-0">
-                      {deals.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-4 text-center">No deals</p>
-                      ) : (
-                        deals.map((d) => (
-                          <div
-                            key={d.id}
-                            className="rounded-md border bg-background px-2.5 py-2 text-xs"
-                          >
-                            <p className="font-medium text-foreground leading-snug">{d.name}</p>
-                            <p className="text-muted-foreground mt-1 tabular-nums">{formatInr(d.value)}</p>
-                          </div>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
+            /* Kanban board */
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto">
+              {Object.entries(kanbanDeals).map(([stage, deals]) => (
+                <div key={stage} className="min-w-[180px]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: kanbanColors[stage] }}
+                    />
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{stage}</span>
+                    <span className="ml-auto text-xs text-gray-400 font-medium">{deals.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {deals.map((deal, i) => (
+                      <div
+                        key={i}
+                        className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      >
+                        <p className="text-sm font-medium text-gray-900 leading-tight">{deal.client}</p>
+                        <p className="text-xs text-gray-500 mt-1 tabular-nums">{formatInrFull(deal.value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-        </section>
+        </div>
 
-        {/* ── Section 3: Client health ── */}
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Client health
-            </h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <ToggleGroup
-                type="single"
-                value={healthPreset}
-                onValueChange={(v) => v && setHealthPreset(v as DatePreset)}
-                variant="outline"
-                size="sm"
-              >
-                <ToggleGroupItem value="week" className="text-xs sm:text-sm">
-                  This week
-                </ToggleGroupItem>
-                <ToggleGroupItem value="month" className="text-xs sm:text-sm">
-                  This month
-                </ToggleGroupItem>
-                <ToggleGroupItem value="quarter" className="text-xs sm:text-sm">
-                  This quarter
-                </ToggleGroupItem>
-                <ToggleGroupItem value="custom" className="text-xs sm:text-sm">
-                  Custom
-                </ToggleGroupItem>
-              </ToggleGroup>
-              {healthPreset === "custom" && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <CalendarRange className="h-3.5 w-3.5" />
-                      {healthCustom?.from && healthCustom?.to
-                        ? `${format(healthCustom.from, "d MMM")} – ${format(healthCustom.to, "d MMM yyyy")}`
-                        : "Select range"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="range"
-                      numberOfMonths={2}
-                      selected={healthCustom}
-                      onSelect={setHealthCustom}
-                      defaultMonth={healthCustom?.from}
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
+        {/* ── Client health ──────────────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Client health</h2>
+              <p className="text-sm text-gray-500">Retention, churn, and task status per client</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xl font-bold text-gray-900">93.5%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Retention rate</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="h-4 w-4 text-red-400" />
+                  <span className="text-xl font-bold text-gray-900">6.5%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Churn rate</p>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card className="shadow-none border">
-              <CardContent className="pt-6 pb-6">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Client retention rate
-                </p>
-                <p className="text-4xl font-semibold tracking-tight text-foreground mt-2 tabular-nums">
-                  {healthKpis.retention}%
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-none border">
-              <CardContent className="pt-6 pb-6">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Churn rate
-                </p>
-                <p className="text-4xl font-semibold tracking-tight text-foreground mt-2 tabular-nums">
-                  {healthKpis.churn}%
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="shadow-none border">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-base font-semibold">Tasks by client</CardTitle>
-              <p className="text-xs text-muted-foreground font-normal">
-                Health is derived from task completion rate for the selected period.
-              </p>
-            </CardHeader>
-            <CardContent className="p-0 pt-2">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Account manager</TableHead>
-                    <TableHead className="text-right">Completed</TableHead>
-                    <TableHead className="text-right">Pending</TableHead>
-                    <TableHead>Health</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {healthRows.map((row) => {
-                    const rate = completionRate(row.completed, row.pending);
-                    const health = healthFromRate(rate);
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-3 px-6 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                      Client
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                      Account Manager
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                      <div className="flex items-center justify-end gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        Completed
+                      </div>
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                      <div className="flex items-center justify-end gap-1">
+                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                        Pending
+                      </div>
+                    </th>
+                    <th className="text-right py-3 px-6 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientHealthData.map((client, i) => {
+                    const cfg = healthConfig[client.health];
                     return (
-                      <TableRow key={row.client}>
-                        <TableCell className="font-medium">{row.client}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.accountManager}</TableCell>
-                        <TableCell className="text-right tabular-nums">{row.completed}</TableCell>
-                        <TableCell className="text-right tabular-nums">{row.pending}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn("text-[10px] font-normal", healthBadgeClass[health])}>
-                            {health}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
+                      <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors">
+                        <td className="py-3.5 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                              <Users className="h-4 w-4 text-gray-500" />
+                            </div>
+                            <span className="font-medium text-gray-900">{client.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-gray-600">{client.manager}</td>
+                        <td className="py-3.5 px-4 text-right tabular-nums">
+                          <span className="text-gray-900 font-medium">{client.completed}</span>
+                          <span className="text-gray-400 ml-1">tasks</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right tabular-nums">
+                          <span className={client.pending > 8 ? "text-red-600 font-medium" : "text-gray-900 font-medium"}>
+                            {client.pending}
+                          </span>
+                          <span className="text-gray-400 ml-1">tasks</span>
+                        </td>
+                        <td className="py-3.5 px-6 text-right">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
+                          >
+                            {client.health}
+                          </span>
+                        </td>
+                      </tr>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </CardContent>
           </Card>
-        </section>
+        </div>
+
       </div>
     </DashboardLayout>
   );
