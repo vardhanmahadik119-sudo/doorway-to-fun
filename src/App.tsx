@@ -12,6 +12,7 @@ import Reports from "./pages/Reports";
 import ClientReports from "./pages/ClientReports";
 import Settings from "./pages/Settings";
 import SharedReport from "./pages/SharedReport";
+import ClientLeadInbox from "./pages/ClientLeadInbox";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/reports" element={<Reports />} />
           <Route path="/client-reports" element={<ClientReports />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/client-lead-inbox" element={<ClientLeadInbox />} />
           <Route path="/shared-report/:id" element={<SharedReport />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

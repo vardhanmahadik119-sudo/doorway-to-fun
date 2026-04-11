@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FolderOpen, CalendarCheck, ChartBar as BarChart3, ClipboardList, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, FolderOpen, CalendarCheck, ChartBar as BarChart3, ClipboardList, Settings, LogOut, Inbox } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
@@ -21,6 +21,7 @@ const mainNav = [
   { title: "Tasks", url: "/tasks", icon: CalendarCheck },
   { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "Client Reports", url: "/client-reports", icon: ClipboardList },
+  { title: "Client Lead Inbox", url: "/client-lead-inbox", icon: Inbox },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
