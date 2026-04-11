@@ -603,23 +603,18 @@ const ClientReports = () => {
                     <div key={item.stage}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-gray-700">{item.stage}</span>
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-sm font-bold text-gray-900 tabular-nums">{item.count}</span>
-                          {i > 0 && (
-                            <span className="text-xs text-gray-400 tabular-nums w-14 text-right">
-                              {convPct}% conv.
-                            </span>
-                          )}
-                        </div>
+                        {i > 0 && (
+                          <span className="text-xs text-gray-400 tabular-nums">
+                            {convPct}% from prev
+                          </span>
+                        )}
                       </div>
                       <div className="h-7 bg-gray-100 rounded-md overflow-hidden">
                         <div
                           className="h-full rounded-md flex items-center px-2.5 transition-all duration-500"
                           style={{ width: `${widthPct}%`, backgroundColor: item.color }}
                         >
-                          {widthPct > 15 && (
-                            <span className="text-xs font-semibold text-white">{widthPct}%</span>
-                          )}
+                          <span className="text-xs font-semibold text-white">{item.count}</span>
                         </div>
                       </div>
                     </div>
