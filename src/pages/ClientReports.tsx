@@ -33,6 +33,9 @@ import {
   Upload,
   BarChart3,
   PieChart as PieChartIcon,
+  IndianRupee,
+  Zap,
+  Trophy,
 } from "lucide-react";
 
 type DatePreset = "last_7_days" | "this_month" | "last_month" | "custom";
@@ -62,6 +65,14 @@ const clients: Client[] = [
   { id: "harbor", name: "Harbor & Co.", totalSpend: 420000, totalLeads: 160, cpl: 2625 },
   { id: "bluepeak", name: "Blue Peak Fintech", totalSpend: 550000, totalLeads: 220, cpl: 2500 },
 ];
+
+const clientRevenueData: Record<string, { closedDeals: number; revenue: number }> = {
+  brightline: { closedDeals: 14, revenue: 2100000 },
+  vertex:     { closedDeals: 9,  revenue: 1440000 },
+  northwind:  { closedDeals: 7,  revenue: 980000  },
+  harbor:     { closedDeals: 11, revenue: 1650000 },
+  bluepeak:   { closedDeals: 18, revenue: 3240000 },
+};
 
 const platformSpendData = [
   { name: "Meta Ads", value: 45, fill: "#1877f2" },
@@ -292,6 +303,16 @@ const ClientReports = () => {
     [totalSpend, totalLeads, selectedPlatform, platformData.cpl],
   );
 
+  const { closedDeals, revenue } = useMemo(
+    () => clientRevenueData[selectedClientId] ?? { closedDeals: 0, revenue: 0 },
+    [selectedClientId],
+  );
+
+  const roas = useMemo(
+    () => (totalSpend > 0 ? revenue / totalSpend : 0),
+    [revenue, totalSpend],
+  );
+
   const handleSaveNote = () => {
     toast({
       title: "Agency Note Saved",
@@ -393,57 +414,108 @@ const ClientReports = () => {
           </CardContent>
         </Card>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Total Spend */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-4">
-                <DollarSign className="h-6 w-6 text-blue-600" />
+        {/* Hero KPIs — Revenue & ROAS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-full">
+                  <IndianRupee className="h-6 w-6 text-emerald-600" />
+                </div>
+                <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">
+                  {closedDeals} deals closed
+                </span>
               </div>
-              <h3 className="text-sm font-medium text-gray-600 mb-1">Total Spend</h3>
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">
+              <p className="text-sm font-medium text-gray-500 mb-1">Total Revenue Generated</p>
+              <p className="text-3xl font-bold text-gray-900 tabular-nums">{formatInr(revenue)}</p>
+              <div className="flex items-center mt-2">
+                <TrendingUp className="h-3 w-3 text-emerald-500 mr-1" />
+                <span className="text-xs text-emerald-600">+18% vs last period</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">From won deals in Client Lead Inbox</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full">
+                  <Zap className="h-6 w-6 text-blue-600" />
+                </div>
+                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2.5 py-1 rounded-full">
+                  Return on Ad Spend
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-500 mb-1">ROAS</p>
+              <p className="text-3xl font-bold text-gray-900 tabular-nums">{roas.toFixed(1)}x</p>
+              <div className="flex items-center mt-2">
+                <TrendingUp className="h-3 w-3 text-blue-500 mr-1" />
+                <span className="text-xs text-blue-600">+0.4x vs last period</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Revenue ÷ Ad Spend · {platformLabel(selectedPlatform)}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Supporting KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5 text-center">
+              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mx-auto mb-3">
+                <DollarSign className="h-5 w-5 text-blue-600" />
+              </div>
+              <h3 className="text-xs font-medium text-gray-500 mb-1">Total Spend</h3>
+              <p className="text-xl font-bold text-gray-900 tabular-nums">
                 {selectedPlatform === "overall" ? formatInr(totalSpend) : formatInr(platformData.totalSpend)}
               </p>
-              <div className="flex items-center justify-center mt-2">
+              <div className="flex items-center justify-center mt-1.5">
                 <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">+12% vs last period</span>
+                <span className="text-xs text-green-600">+12%</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">{platformLabel(selectedPlatform)}</div>
             </CardContent>
           </Card>
 
-          {/* Total Leads */}
           <Card className="border-0 shadow-sm">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-4">
-                <Users className="h-6 w-6 text-green-600" />
+            <CardContent className="p-5 text-center">
+              <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-full mx-auto mb-3">
+                <Users className="h-5 w-5 text-green-600" />
               </div>
-              <h3 className="text-sm font-medium text-gray-600 mb-1">Total Leads</h3>
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">
+              <h3 className="text-xs font-medium text-gray-500 mb-1">Total Leads</h3>
+              <p className="text-xl font-bold text-gray-900 tabular-nums">
                 {selectedPlatform === "overall" ? totalLeads.toLocaleString() : platformData.totalLeads.toLocaleString()}
               </p>
-              <div className="flex items-center justify-center mt-2">
+              <div className="flex items-center justify-center mt-1.5">
                 <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">+8% vs last period</span>
+                <span className="text-xs text-green-600">+8%</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">{platformLabel(selectedPlatform)}</div>
             </CardContent>
           </Card>
 
-          {/* CPL */}
           <Card className="border-0 shadow-sm">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-4">
-                <Target className="h-6 w-6 text-purple-600" />
+            <CardContent className="p-5 text-center">
+              <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full mx-auto mb-3">
+                <Target className="h-5 w-5 text-purple-600" />
               </div>
-              <h3 className="text-sm font-medium text-gray-600 mb-1">Cost Per Lead (CPL)</h3>
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">{formatInr(avgCPL)}</p>
-              <div className="flex items-center justify-center mt-2">
+              <h3 className="text-xs font-medium text-gray-500 mb-1">Cost Per Lead</h3>
+              <p className="text-xl font-bold text-gray-900 tabular-nums">{formatInr(avgCPL)}</p>
+              <div className="flex items-center justify-center mt-1.5">
                 <TrendingDown className="h-3 w-3 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">-3% vs last period</span>
+                <span className="text-xs text-green-600">-3%</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">{platformLabel(selectedPlatform)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5 text-center">
+              <div className="flex items-center justify-center w-10 h-10 bg-amber-100 rounded-full mx-auto mb-3">
+                <Trophy className="h-5 w-5 text-amber-600" />
+              </div>
+              <h3 className="text-xs font-medium text-gray-500 mb-1">Closed Deals</h3>
+              <p className="text-xl font-bold text-gray-900 tabular-nums">{closedDeals}</p>
+              <div className="flex items-center justify-center mt-1.5">
+                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                <span className="text-xs text-green-600">+2 vs last period</span>
+              </div>
             </CardContent>
           </Card>
         </div>

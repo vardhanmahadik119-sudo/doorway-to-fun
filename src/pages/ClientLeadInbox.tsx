@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +10,6 @@ import {
   List,
   LayoutGrid,
   X,
-  TrendingUp,
   Phone,
   MapPin,
   Clock,
@@ -38,6 +36,7 @@ interface Lead {
   adName: string;
   assignedTo: string | null;
   estimatedValue: number | null;
+  confirmedValue?: number | null;
   timeAgo: string;
   notes: string;
   activity: { text: string; time: string; icon: "lead" | "whatsapp" | "call" | "note" }[];
@@ -64,7 +63,7 @@ const CLIENTS: ClientData[] = [
       { id: "l2", name: "Sneha Patil", phone: "+91 87654 32109", city: "Pune", status: "contacted", platform: "meta", adName: "2BHK Interior Package", assignedTo: "Priya", estimatedValue: 45000, timeAgo: "1h ago", notes: "Called once, will call back tomorrow", activity: [{ text: "Lead received via Meta Ads", time: "11:20am", icon: "lead" }, { text: "Called by Priya — no answer", time: "11:45am", icon: "call" }] },
       { id: "l3", name: "Amit Shah", phone: "+91 76543 21098", city: "Ahmedabad", status: "qualified", platform: "google", adName: "Home Renovation - Search", assignedTo: "Rahul", estimatedValue: 80000, timeAgo: "3h ago", notes: "Very interested, budget confirmed ₹80k", activity: [{ text: "Lead received via Google Ads", time: "9:15am", icon: "lead" }, { text: "Called by Rahul — qualified", time: "10:00am", icon: "call" }] },
       { id: "l4", name: "Meera Joshi", phone: "+91 65432 10987", city: "Mumbai", status: "proposal", platform: "meta", adName: "Premium Package", assignedTo: "Priya", estimatedValue: 120000, timeAgo: "1d ago", notes: "Proposal sent via email", activity: [{ text: "Lead received via Meta Ads", time: "Yesterday 3pm", icon: "lead" }, { text: "Proposal sent by Priya", time: "Yesterday 5pm", icon: "note" }] },
-      { id: "l5", name: "Karan Patel", phone: "+91 54321 09876", city: "Surat", status: "won", platform: "google", adName: "Home Renovation - Search", assignedTo: "Rahul", estimatedValue: 65000, timeAgo: "2d ago", notes: "Closed! Project starts next week", activity: [{ text: "Lead received via Google Ads", time: "2d ago 10am", icon: "lead" }, { text: "Deal closed by Rahul", time: "2d ago 4pm", icon: "call" }] },
+      { id: "l5", name: "Karan Patel", phone: "+91 54321 09876", city: "Surat", status: "won", platform: "google", adName: "Home Renovation - Search", assignedTo: "Rahul", estimatedValue: 65000, confirmedValue: 72000, timeAgo: "2d ago", notes: "Closed! Project starts next week", activity: [{ text: "Lead received via Google Ads", time: "2d ago 10am", icon: "lead" }, { text: "Deal closed by Rahul", time: "2d ago 4pm", icon: "call" }] },
       { id: "l6", name: "Divya Nair", phone: "+91 43210 98765", city: "Bangalore", status: "new", platform: "seo", adName: "Organic — Interior Design", assignedTo: null, estimatedValue: null, timeAgo: "5m ago", notes: "", activity: [{ text: "Lead received via SEO", time: "2:31pm", icon: "lead" }] },
       { id: "l7", name: "Suresh Menon", phone: "+91 32109 87654", city: "Chennai", status: "new", platform: "meta", adName: "2BHK Interior Package", assignedTo: null, estimatedValue: null, timeAgo: "8m ago", notes: "", activity: [{ text: "Lead received via Meta Ads", time: "2:28pm", icon: "lead" }] },
       { id: "l8", name: "Pooja Iyer", phone: "+91 21098 76543", city: "Mumbai", status: "contacted", platform: "google", adName: "Home Renovation - Display", assignedTo: "Priya", estimatedValue: null, timeAgo: "2h ago", notes: "", activity: [{ text: "Lead received via Google Ads", time: "12:30pm", icon: "lead" }, { text: "Called by Priya — interested", time: "1:00pm", icon: "call" }] },
@@ -90,7 +89,7 @@ const CLIENTS: ClientData[] = [
       { id: "l12", name: "Rohan Desai", phone: "+91 77654 32108", city: "Hyderabad", status: "new", platform: "meta", adName: "Studio Package - Meta", assignedTo: null, estimatedValue: null, timeAgo: "20m ago", notes: "", activity: [{ text: "Lead received via Meta Ads", time: "2:16pm", icon: "lead" }] },
       { id: "l13", name: "Kavya Reddy", phone: "+91 66543 21097", city: "Hyderabad", status: "proposal", platform: "linkedin", adName: "B2B Studio Services", assignedTo: "Ananya", estimatedValue: 200000, timeAgo: "1d ago", notes: "Corporate client, big budget", activity: [{ text: "Lead received via LinkedIn", time: "Yesterday 10am", icon: "lead" }, { text: "Proposal sent by Ananya", time: "Yesterday 3pm", icon: "note" }] },
       { id: "l14", name: "Aditya Kumar", phone: "+91 55432 10986", city: "Bangalore", status: "new", platform: "meta", adName: "Studio Package - Meta", assignedTo: null, estimatedValue: null, timeAgo: "35m ago", notes: "", activity: [{ text: "Lead received via Meta Ads", time: "2:01pm", icon: "lead" }] },
-      { id: "l15", name: "Sanya Patel", phone: "+91 44321 09875", city: "Mumbai", status: "won", platform: "linkedin", adName: "B2B Studio Services", assignedTo: "Ananya", estimatedValue: 150000, timeAgo: "3d ago", notes: "Closed!", activity: [{ text: "Lead received via LinkedIn", time: "3d ago", icon: "lead" }, { text: "Deal closed by Ananya", time: "2d ago", icon: "call" }] },
+      { id: "l15", name: "Sanya Patel", phone: "+91 44321 09875", city: "Mumbai", status: "won", platform: "linkedin", adName: "B2B Studio Services", assignedTo: "Ananya", estimatedValue: 150000, confirmedValue: 165000, timeAgo: "3d ago", notes: "Closed!", activity: [{ text: "Lead received via LinkedIn", time: "3d ago", icon: "lead" }, { text: "Deal closed by Ananya", time: "2d ago", icon: "call" }] },
     ],
   },
   {
@@ -354,6 +353,75 @@ function LeadPanel({
   );
 }
 
+// ─── Won Confirm Modal ────────────────────────────────────────────────────────
+
+function WonConfirmModal({
+  leadName,
+  suggestedValue,
+  onConfirm,
+  onSkip,
+}: {
+  leadName: string;
+  suggestedValue: number | null;
+  onConfirm: (value: number | null) => void;
+  onSkip: () => void;
+}) {
+  const [value, setValue] = useState<string>(suggestedValue ? String(suggestedValue) : "");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onSkip} />
+      <div className="relative z-50 bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <div className="flex items-center justify-center w-14 h-14 bg-emerald-100 rounded-full mx-auto mb-4">
+          <span className="text-2xl">🎉</span>
+        </div>
+        <h2 className="text-lg font-semibold text-center text-gray-900 mb-1">Deal Won!</h2>
+        <p className="text-sm text-center text-gray-500 mb-5">
+          Confirm the final closed value for <span className="font-medium text-gray-700">{leadName}</span>
+        </p>
+        <div className="mb-5">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
+            Final Closed Value
+          </label>
+          <div className="relative">
+            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <input
+              type="number"
+              autoFocus
+              className="w-full pl-8 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="Enter final deal value"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          </div>
+          {value && (
+            <p className="text-xs text-gray-500 mt-1">
+              {formatInr(Number(value))}
+              {suggestedValue && Number(value) !== suggestedValue && (
+                <span className="ml-2 text-amber-600">
+                  (estimated was {formatInr(suggestedValue)})
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onSkip}>
+            Skip
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={() => onConfirm(value ? Number(value) : null)}
+          >
+            Confirm Deal
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ClientLeadInbox() {
@@ -365,10 +433,11 @@ export default function ClientLeadInbox() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [wonModal, setWonModal] = useState<{ leadId: string; leadName: string; suggestedValue: number | null } | null>(null);
 
   const selectedClient = clientsData.find(c => c.id === selectedClientId) ?? null;
 
-  const updateLead = (leadId: string, patch: Partial<Lead>) => {
+  const applyLeadPatch = (leadId: string, patch: Partial<Lead>) => {
     setClientsData(prev =>
       prev.map(client => ({
         ...client,
@@ -380,6 +449,28 @@ export default function ClientLeadInbox() {
     if (selectedLead?.id === leadId) {
       setSelectedLead(prev => prev ? { ...prev, ...patch } : prev);
     }
+  };
+
+  const updateLead = (leadId: string, patch: Partial<Lead>) => {
+    if (patch.status === "won") {
+      const lead = clientsData.flatMap(c => c.leads).find(l => l.id === leadId);
+      setWonModal({ leadId, leadName: lead?.name ?? "Lead", suggestedValue: lead?.estimatedValue ?? null });
+      return;
+    }
+    applyLeadPatch(leadId, patch);
+  };
+
+  const confirmWon = (confirmedValue: number | null) => {
+    if (!wonModal) return;
+    applyLeadPatch(wonModal.leadId, {
+      status: "won",
+      confirmedValue,
+      activity: [
+        ...(clientsData.flatMap(c => c.leads).find(l => l.id === wonModal.leadId)?.activity ?? []),
+        { text: `Deal confirmed${confirmedValue ? ` at ${formatInr(confirmedValue)}` : ""}`, time: "Just now", icon: "call" as const },
+      ],
+    });
+    setWonModal(null);
   };
 
   const filteredLeads = (selectedClient?.leads ?? []).filter(lead => {
@@ -465,7 +556,7 @@ export default function ClientLeadInbox() {
                         {client.health}
                       </span>
                       <span className="text-xs text-gray-400">
-                        Last lead: {client.leads.sort((a, b) => 0)[0]?.timeAgo ?? "—"}
+                        Last lead: {client.leads[0]?.timeAgo ?? "—"}
                       </span>
                     </div>
                   </CardContent>
@@ -752,6 +843,19 @@ export default function ClientLeadInbox() {
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
           onUpdate={updateLead}
+        />
+      )}
+
+      {/* Won Confirmation Modal */}
+      {wonModal && (
+        <WonConfirmModal
+          leadName={wonModal.leadName}
+          suggestedValue={wonModal.suggestedValue}
+          onConfirm={confirmWon}
+          onSkip={() => {
+            applyLeadPatch(wonModal.leadId, { status: "won" });
+            setWonModal(null);
+          }}
         />
       )}
     </DashboardLayout>
