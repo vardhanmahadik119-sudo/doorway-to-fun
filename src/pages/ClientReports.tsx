@@ -3,17 +3,10 @@ import { format, subDays, eachDayOfInterval, eachWeekOfInterval } from "date-fns
 import type { DateRange } from "react-day-picker";
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   Cell,
-  Line,
-  ComposedChart,
 } from "recharts";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +24,6 @@ import {
   FileText,
   Save,
   Upload,
-  BarChart3,
   PieChart as PieChartIcon,
   IndianRupee,
   Zap,
@@ -65,6 +57,44 @@ const clients: Client[] = [
   { id: "harbor", name: "Harbor & Co.", totalSpend: 420000, totalLeads: 160, cpl: 2625 },
   { id: "bluepeak", name: "Blue Peak Fintech", totalSpend: 550000, totalLeads: 220, cpl: 2500 },
 ];
+
+const clientFunnelData: Record<string, { stage: string; count: number; color: string }[]> = {
+  brightline: [
+    { stage: "Total Leads", count: 180, color: "#3b82f6" },
+    { stage: "Contacted",   count: 124, color: "#8b5cf6" },
+    { stage: "Qualified",   count: 68,  color: "#f59e0b" },
+    { stage: "Proposal",    count: 32,  color: "#f97316" },
+    { stage: "Won",         count: 14,  color: "#10b981" },
+  ],
+  vertex: [
+    { stage: "Total Leads", count: 120, color: "#3b82f6" },
+    { stage: "Contacted",   count: 85,  color: "#8b5cf6" },
+    { stage: "Qualified",   count: 45,  color: "#f59e0b" },
+    { stage: "Proposal",    count: 20,  color: "#f97316" },
+    { stage: "Won",         count: 9,   color: "#10b981" },
+  ],
+  northwind: [
+    { stage: "Total Leads", count: 100, color: "#3b82f6" },
+    { stage: "Contacted",   count: 70,  color: "#8b5cf6" },
+    { stage: "Qualified",   count: 38,  color: "#f59e0b" },
+    { stage: "Proposal",    count: 16,  color: "#f97316" },
+    { stage: "Won",         count: 7,   color: "#10b981" },
+  ],
+  harbor: [
+    { stage: "Total Leads", count: 160, color: "#3b82f6" },
+    { stage: "Contacted",   count: 112, color: "#8b5cf6" },
+    { stage: "Qualified",   count: 60,  color: "#f59e0b" },
+    { stage: "Proposal",    count: 24,  color: "#f97316" },
+    { stage: "Won",         count: 11,  color: "#10b981" },
+  ],
+  bluepeak: [
+    { stage: "Total Leads", count: 220, color: "#3b82f6" },
+    { stage: "Contacted",   count: 158, color: "#8b5cf6" },
+    { stage: "Qualified",   count: 88,  color: "#f59e0b" },
+    { stage: "Proposal",    count: 38,  color: "#f97316" },
+    { stage: "Won",         count: 18,  color: "#10b981" },
+  ],
+};
 
 const clientRevenueData: Record<string, { closedDeals: number; revenue: number }> = {
   brightline: { closedDeals: 14, revenue: 2100000 },
@@ -224,7 +254,6 @@ const ClientReports = () => {
     from: subDays(new Date(), 14),
     to: new Date(),
   }));
-  const [showComparison, setShowComparison] = useState<boolean>(false);
   const [platformCommentary, setPlatformCommentary] = useState<Record<string, Record<string, string>>>(() => ({
     brightline: {
       overall: "Overall performance is strong with consistent lead generation across all platforms.",
@@ -311,6 +340,11 @@ const ClientReports = () => {
   const roas = useMemo(
     () => (totalSpend > 0 ? revenue / totalSpend : 0),
     [revenue, totalSpend],
+  );
+
+  const funnelData = useMemo(
+    () => clientFunnelData[selectedClientId] ?? clientFunnelData["brightline"],
+    [selectedClientId],
   );
 
   const handleSaveNote = () => {
@@ -522,87 +556,89 @@ const ClientReports = () => {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Leads Performance */}
+          {/* Lead Funnel */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-blue-600" />
-                  Leads Performance
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowComparison(!showComparison)}
-                    className="gap-2"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    {showComparison ? "Hide" : "Show"} Comparison
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const blob = new Blob(
-                        [
-                          `${selectedClient.name} — ${platformLabel(selectedPlatform)} Report\n\n` +
-                            `Generated: ${new Date().toLocaleDateString()}\n` +
-                            `Total Spend: ${formatInr(totalSpend)}\n` +
-                            `Total Leads: ${totalLeads}\n` +
-                            `CPL: ${formatInr(avgCPL)}\n\n` +
-                            `Agency Commentary:\n${currentAgencyNote}\n`,
-                        ],
-                        { type: "text/plain" },
-                      );
-                      const a = document.createElement("a");
-                      a.href = URL.createObjectURL(blob);
-                      a.download = `${selectedClient.id}-${selectedPlatform}-report.txt`;
-                      a.click();
-                    }}
-                    className="gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Export
-                  </Button>
+                <div>
+                  <CardTitle className="text-base font-semibold">Lead Funnel</CardTitle>
+                  <p className="text-xs text-gray-500 mt-0.5">Lead-to-deal conversion · {selectedClient.name}</p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const blob = new Blob(
+                      [
+                        `${selectedClient.name} — ${platformLabel(selectedPlatform)} Report\n\n` +
+                          `Generated: ${new Date().toLocaleDateString()}\n` +
+                          `Total Spend: ${formatInr(totalSpend)}\n` +
+                          `Total Leads: ${totalLeads}\n` +
+                          `CPL: ${formatInr(avgCPL)}\n` +
+                          `Revenue: ${formatInr(revenue)}\n` +
+                          `ROAS: ${roas.toFixed(1)}x\n\n` +
+                          `Agency Commentary:\n${currentAgencyNote}\n`,
+                      ],
+                      { type: "text/plain" },
+                    );
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${selectedClient.id}-${selectedPlatform}-report.txt`;
+                    a.click();
+                  }}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Export
+                </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    data={selectedPlatform === "overall" ? leadsData : currentLeadsData}
-                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      formatter={(value: number, name: string) => [
-                        name === "leads" ? `${value} leads` : formatInr(value),
-                        name === "leads" ? "Leads" : "Spend",
-                      ]}
-                    />
-                    <Bar dataKey="leads" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={48} />
-                    {showComparison && (
-                      <Line
-                        type="monotone"
-                        dataKey="lastMonthLeads"
-                        stroke="#9ca3af"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ fill: "#9ca3af", r: 3 }}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
+            <CardContent className="pt-2">
+              <div className="space-y-3">
+                {funnelData.map((item, i) => {
+                  const prev = i > 0 ? funnelData[i - 1].count : item.count;
+                  const convPct = i > 0 ? Math.round((item.count / prev) * 100) : 100;
+                  const widthPct = Math.round((item.count / funnelData[0].count) * 100);
+                  return (
+                    <div key={item.stage}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700">{item.stage}</span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-sm font-bold text-gray-900 tabular-nums">{item.count}</span>
+                          {i > 0 && (
+                            <span className="text-xs text-gray-400 tabular-nums w-14 text-right">
+                              {convPct}% conv.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-7 bg-gray-100 rounded-md overflow-hidden">
+                        <div
+                          className="h-full rounded-md flex items-center px-2.5 transition-all duration-500"
+                          style={{ width: `${widthPct}%`, backgroundColor: item.color }}
+                        >
+                          {widthPct > 15 && (
+                            <span className="text-xs font-semibold text-white">{widthPct}%</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Leads: {totalLeads.toLocaleString()}</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  +{Math.max(0, Math.round(((totalLeads - 100) / 100) * 100))}% growth
-                </Badge>
+              <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">Lead → Deal Rate</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Avg Revenue / Deal</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {closedDeals > 0 ? formatInr(Math.round(revenue / closedDeals)) : "—"}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
