@@ -22,8 +22,8 @@ import {
   Users,
   Target,
   FileText,
+  Download,
   Save,
-  Upload,
   PieChart as PieChartIcon,
   IndianRupee,
   Zap,
@@ -361,11 +361,158 @@ const ClientReports = () => {
     }));
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      toast({ title: "Report Uploaded", description: `${file.name} has been uploaded and processed.` });
-    }
+  const generateReport = () => {
+    const dateLabel =
+      datePreset === "last_7_days" ? "Last 7 Days"
+      : datePreset === "this_month" ? "This Month"
+      : datePreset === "last_month" ? "Last Month"
+      : "Custom Range";
+
+    const wonRate = Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100);
+    const qualRate = Math.round((funnelData[2].count / funnelData[0].count) * 100);
+    const perf = roas >= 4 ? "exceptional" : roas >= 3 ? "strong" : roas >= 2 ? "solid" : "developing";
+
+    const aiSummary =
+      `${selectedClient.name} delivered ${perf} results this period with a ROAS of ${roas.toFixed(1)}x, generating ${formatInr(revenue)} in confirmed revenue from ${closedDeals} closed deals. ` +
+      `Out of ${funnelData[0].count} total leads, ${wonRate}% converted to closed deals and ${qualRate}% reached the qualified stage — ` +
+      `${qualRate >= 50 ? "a strong qualification rate indicating good lead-to-ad fit" : "an area with room for improvement through tighter audience targeting"}. ` +
+      `Cost per lead came in at ${formatInr(avgCPL)}, ${avgCPL < 2500 ? "demonstrating efficient acquisition cost across campaigns" : "with room to optimise targeting and creative for better efficiency"}. ` +
+      `${roas >= 3 ? "The overall return on ad spend reflects strong campaign health and clear value delivery." : "Incremental improvements to creative strategy and audience segmentation are recommended to strengthen pipeline conversion in the next period."}`;
+
+    const funnelHtml = funnelData.map((item, i) => {
+      const prev = i > 0 ? funnelData[i - 1].count : item.count;
+      const convPct = i > 0 ? Math.round((item.count / prev) * 100) : null;
+      const widthPct = Math.round((item.count / funnelData[0].count) * 100);
+      return `
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:13px;font-weight:500;color:#374151;">${item.stage}</span>
+            ${convPct !== null ? `<span style="font-size:11px;color:#9ca3af;">${convPct}% from prev</span>` : ""}
+          </div>
+          <div style="height:26px;background:#f3f4f6;border-radius:6px;overflow:hidden;">
+            <div style="width:${widthPct}%;height:100%;background:${item.color};border-radius:6px;display:flex;align-items:center;padding:0 10px;">
+              <span style="font-size:12px;font-weight:600;color:white;">${item.count}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    const budgetHtml = platformSpendData.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f9fafb;font-size:13px;">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.fill};margin-right:8px;"></span>${p.name}</span>
+        <span style="font-weight:600;">${p.value}%</span>
+      </div>`).join("");
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${selectedClient.name} — Campaign Report</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#111827;padding:48px;max-width:960px;margin:0 auto;}
+    @media print{body{padding:24px;}.no-print{display:none!important;}}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:28px;border-bottom:2px solid #e5e7eb;}
+    .brand{font-size:13px;font-weight:700;color:#6366f1;letter-spacing:.06em;}
+    .client-name{font-size:28px;font-weight:700;color:#111827;margin-top:6px;}
+    .meta{font-size:13px;color:#6b7280;margin-top:4px;}
+    .section-title{font-size:14px;font-weight:600;color:#374151;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #f3f4f6;text-transform:uppercase;letter-spacing:.04em;}
+    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    .hero-card{border-radius:12px;padding:22px;}
+    .hero-green{background:linear-gradient(135deg,#ecfdf5,#fff);border:1px solid #d1fae5;}
+    .hero-blue{background:linear-gradient(135deg,#eff6ff,#fff);border:1px solid #dbeafe;}
+    .hero-label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+    .hero-value{font-size:30px;font-weight:700;}
+    .hero-sub{font-size:11px;color:#9ca3af;margin-top:5px;}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:32px;}
+    .stat-card{border:1px solid #f3f4f6;border-radius:8px;padding:14px;text-align:center;}
+    .stat-label{font-size:11px;color:#9ca3af;margin-bottom:4px;}
+    .stat-value{font-size:19px;font-weight:700;color:#111827;}
+    .ai-box{background:#f0f9ff;border-left:4px solid #3b82f6;border-radius:0 10px 10px 0;padding:20px 22px;margin-bottom:32px;}
+    .ai-label{font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .ai-text{font-size:13px;line-height:1.75;color:#374151;}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px;}
+    .box{border:1px solid #f3f4f6;border-radius:10px;padding:20px;}
+    .funnel-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;}
+    .fsub-label{font-size:11px;color:#9ca3af;margin-bottom:3px;}
+    .fsub-value{font-size:20px;font-weight:700;color:#111827;}
+    .commentary-box{border:1px solid #f3f4f6;border-radius:10px;padding:20px;margin-bottom:32px;}
+    .commentary-text{font-size:13px;line-height:1.75;color:#374151;white-space:pre-wrap;}
+    .footer{text-align:center;font-size:11px;color:#9ca3af;padding-top:24px;border-top:1px solid #f3f4f6;}
+    .print-btn{position:fixed;bottom:28px;right:28px;background:#111827;color:white;border:none;padding:13px 22px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+    .print-btn:hover{background:#1f2937;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="brand">⚡ ADFLOW CRM</div>
+    <div class="client-name">${selectedClient.name}</div>
+    <div class="meta">${platformLabel(selectedPlatform)} &nbsp;·&nbsp; ${dateLabel} &nbsp;·&nbsp; ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:12px;color:#6b7280;font-weight:500;">Campaign Performance Report</div>
+    <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Generated ${new Date().toLocaleString()}</div>
+  </div>
+</div>
+
+<div class="section-title">Key Performance Indicators</div>
+<div class="hero-grid">
+  <div class="hero-card hero-green">
+    <div class="hero-label">Total Revenue Generated</div>
+    <div class="hero-value" style="color:#059669;">${formatInr(revenue)}</div>
+    <div class="hero-sub">${closedDeals} deals closed &nbsp;·&nbsp; from won leads</div>
+  </div>
+  <div class="hero-card hero-blue">
+    <div class="hero-label">ROAS</div>
+    <div class="hero-value" style="color:#2563eb;">${roas.toFixed(1)}x</div>
+    <div class="hero-sub">Revenue ÷ Ad Spend &nbsp;·&nbsp; ${platformLabel(selectedPlatform)}</div>
+  </div>
+</div>
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-label">Total Spend</div><div class="stat-value">${formatInr(totalSpend)}</div></div>
+  <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${totalLeads}</div></div>
+  <div class="stat-card"><div class="stat-label">Cost Per Lead</div><div class="stat-value">${formatInr(avgCPL)}</div></div>
+  <div class="stat-card"><div class="stat-label">Closed Deals</div><div class="stat-value">${closedDeals}</div></div>
+</div>
+
+<div class="section-title">AI-Generated Summary</div>
+<div class="ai-box">
+  <div class="ai-label">✨ AdFlow AI Analysis</div>
+  <div class="ai-text">${aiSummary}</div>
+</div>
+
+<div class="two-col">
+  <div class="box">
+    <div class="section-title" style="margin-bottom:14px;">Lead Funnel</div>
+    ${funnelHtml}
+    <div class="funnel-summary">
+      <div><div class="fsub-label">Lead → Deal Rate</div><div class="fsub-value">${wonRate}%</div></div>
+      <div><div class="fsub-label">Avg Revenue / Deal</div><div class="fsub-value">${closedDeals > 0 ? formatInr(Math.round(revenue / closedDeals)) : "—"}</div></div>
+    </div>
+  </div>
+  <div class="box">
+    <div class="section-title" style="margin-bottom:14px;">Budget Distribution</div>
+    ${budgetHtml}
+  </div>
+</div>
+
+${currentAgencyNote ? `
+<div class="section-title">Agency Commentary</div>
+<div class="commentary-box">
+  <div class="commentary-text">${currentAgencyNote}</div>
+</div>` : ""}
+
+<div class="footer">Generated by AdFlow CRM &nbsp;·&nbsp; ${selectedClient.name} &nbsp;·&nbsp; ${new Date().getFullYear()}</div>
+
+<button class="print-btn no-print" onclick="window.print()">🖨&nbsp; Print / Save as PDF</button>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
   };
 
   const platformLabel = (p: string) => p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -375,16 +522,24 @@ const ClientReports = () => {
       <div className="max-w-[1400px] space-y-8 pb-10">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Client Reports</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Per-client platform performance, spend analytics, and agency commentary.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Client Reports</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Per-client platform performance, spend analytics, and agency commentary.
+              </p>
+            </div>
+            <Button onClick={generateReport} className="gap-2 bg-gray-900 hover:bg-gray-800 text-white">
+              <Download className="h-4 w-4" />
+              Download Report
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-2">Select Client</label>
                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
@@ -433,17 +588,6 @@ const ClientReports = () => {
                 </Select>
               </div>
 
-              <div className="flex items-end">
-                <label className="cursor-pointer w-full">
-                  <input type="file" accept=".csv,.xlsx" onChange={handleFileUpload} className="hidden" />
-                  <Button variant="outline" className="gap-2 w-full" asChild>
-                    <span>
-                      <Upload className="h-4 w-4" />
-                      Upload Report
-                    </span>
-                  </Button>
-                </label>
-              </div>
             </div>
           </CardContent>
         </Card>
