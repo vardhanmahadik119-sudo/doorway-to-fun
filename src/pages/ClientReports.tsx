@@ -24,14 +24,36 @@ import {
   FileText,
   Download,
   Save,
+  Settings,
+  X,
   PieChart as PieChartIcon,
   IndianRupee,
   Zap,
   Trophy,
+  TrendingDown as TrendDown,
 } from "lucide-react";
 
 type DatePreset = "last_7_days" | "this_month" | "last_month" | "custom";
 type Platform = "overall" | "meta_ads" | "google_ads" | "google_analytics" | "seo" | "linkedin_ads";
+
+type ClientSettings = {
+  showFunnel: boolean;
+  showBudgetDist: boolean;
+  showCampaignTable: boolean;
+  showPlatformMetrics: boolean;
+  showCommentary: boolean;
+  targets: { cpl: number | null; roas: number | null; leads: number | null };
+};
+
+const DEFAULT_SETTINGS: ClientSettings = {
+  showFunnel: true,
+  showBudgetDist: true,
+  showCampaignTable: true,
+  showPlatformMetrics: true,
+  showCommentary: true,
+  targets: { cpl: null, roas: null, leads: null },
+};
+
 type Client = {
   id: string;
   name: string;
@@ -102,6 +124,58 @@ const clientRevenueData: Record<string, { closedDeals: number; revenue: number }
   northwind:  { closedDeals: 7,  revenue: 980000  },
   harbor:     { closedDeals: 11, revenue: 1650000 },
   bluepeak:   { closedDeals: 18, revenue: 3240000 },
+};
+
+type MetricStatus = "good" | "warn" | "bad";
+type PlatformMetric = { label: string; value: string; status: MetricStatus; trend: string; trendPositive: boolean; benchmark: string };
+
+const platformMetricsDetail: Partial<Record<Platform, PlatformMetric[]>> = {
+  meta_ads: [
+    { label: "CTR",                   value: "2.4%",    status: "good", trend: "+0.3%",  trendPositive: true,  benchmark: "> 1.5%" },
+    { label: "CPM",                   value: "₹180",    status: "good", trend: "-₹12",   trendPositive: true,  benchmark: "< ₹250" },
+    { label: "Frequency",             value: "2.1",     status: "good", trend: "+0.2",   trendPositive: false, benchmark: "< 3.5" },
+    { label: "Lead Form Completion",  value: "68%",     status: "good", trend: "+4%",    trendPositive: true,  benchmark: "> 60%" },
+    { label: "Video View Rate",       value: "34%",     status: "warn", trend: "-2%",    trendPositive: false, benchmark: "> 40%" },
+    { label: "Cost per Result",       value: "₹2,450",  status: "good", trend: "-₹80",   trendPositive: true,  benchmark: "< ₹3,000" },
+  ],
+  google_ads: [
+    { label: "Quality Score",         value: "7.2/10",  status: "good", trend: "+0.4",   trendPositive: true,  benchmark: "> 6" },
+    { label: "Impression Share",      value: "42%",     status: "warn", trend: "-3%",    trendPositive: false, benchmark: "> 50%" },
+    { label: "CTR",                   value: "3.8%",    status: "good", trend: "+0.5%",  trendPositive: true,  benchmark: "> 2%" },
+    { label: "Conversion Rate",       value: "4.2%",    status: "good", trend: "+0.6%",  trendPositive: true,  benchmark: "> 3%" },
+    { label: "Avg. CPC",              value: "₹25",     status: "good", trend: "-₹3",    trendPositive: true,  benchmark: "< ₹40" },
+    { label: "Lost IS (Budget)",      value: "18%",     status: "warn", trend: "+2%",    trendPositive: false, benchmark: "< 15%" },
+  ],
+  linkedin_ads: [
+    { label: "Form Open Rate",        value: "18%",     status: "good", trend: "+2%",    trendPositive: true,  benchmark: "> 15%" },
+    { label: "Form Completion Rate",  value: "52%",     status: "good", trend: "+4%",    trendPositive: true,  benchmark: "> 45%" },
+    { label: "Engagement Rate",       value: "2.8%",    status: "good", trend: "+0.3%",  trendPositive: true,  benchmark: "> 2%" },
+    { label: "CPM",                   value: "₹420",    status: "warn", trend: "+₹15",   trendPositive: false, benchmark: "Avg ₹380" },
+    { label: "Follower Growth",       value: "+124",    status: "good", trend: "+18",    trendPositive: true,  benchmark: "Positive" },
+    { label: "Click-to-Lead Rate",    value: "6.2%",    status: "good", trend: "+0.8%",  trendPositive: true,  benchmark: "> 5%" },
+  ],
+  seo: [
+    { label: "Organic Sessions",      value: "27,000",  status: "good", trend: "+12%",   trendPositive: true,  benchmark: "MoM growth" },
+    { label: "Keywords Top 3",        value: "8",       status: "warn", trend: "+1",     trendPositive: true,  benchmark: "> 10" },
+    { label: "Keywords Top 10",       value: "24",      status: "good", trend: "+5",     trendPositive: true,  benchmark: "> 20" },
+    { label: "Avg. Position",         value: "12.4",    status: "warn", trend: "-1.2",   trendPositive: true,  benchmark: "< 10" },
+    { label: "Backlinks Gained",      value: "38",      status: "good", trend: "+8",     trendPositive: true,  benchmark: "Consistent" },
+    { label: "Organic Bounce Rate",   value: "38%",     status: "good", trend: "-3%",    trendPositive: true,  benchmark: "< 45%" },
+  ],
+  google_analytics: [
+    { label: "Avg. Session Duration", value: "3:24",    status: "good", trend: "+0:18",  trendPositive: true,  benchmark: "> 2:30" },
+    { label: "Pages per Session",     value: "4.2",     status: "good", trend: "+0.4",   trendPositive: true,  benchmark: "> 3" },
+    { label: "New Visitors",          value: "64%",     status: "good", trend: "+4%",    trendPositive: true,  benchmark: "60–70%" },
+    { label: "Goal Completion Rate",  value: "5.2%",    status: "warn", trend: "-0.3%",  trendPositive: false, benchmark: "> 6%" },
+    { label: "Bounce Rate",           value: "42%",     status: "good", trend: "-2%",    trendPositive: true,  benchmark: "< 50%" },
+    { label: "Return Visitor Rate",   value: "36%",     status: "good", trend: "+3%",    trendPositive: true,  benchmark: "> 30%" },
+  ],
+};
+
+const METRIC_STATUS: Record<MetricStatus, { dot: string; badge: string; text: string }> = {
+  good: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700", text: "text-emerald-600" },
+  warn: { dot: "bg-amber-400",   badge: "bg-amber-50 text-amber-700",    text: "text-amber-600"   },
+  bad:  { dot: "bg-red-500",     badge: "bg-red-50 text-red-700",        text: "text-red-600"     },
 };
 
 const platformSpendData = [
@@ -245,11 +319,130 @@ function buildLeadsData(preset: DatePreset, custom: DateRange | undefined): { da
   }));
 }
 
+// ─── Customise Panel ──────────────────────────────────────────────────────────
+
+function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+  return (
+    <button onClick={onChange} className={`relative inline-flex h-5 w-9 rounded-full transition-colors flex-shrink-0 ${on ? "bg-blue-600" : "bg-gray-200"}`}>
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${on ? "translate-x-4" : "translate-x-0.5"}`} />
+    </button>
+  );
+}
+
+function CustomisePanel({
+  settings,
+  onUpdate,
+  onClose,
+}: {
+  settings: ClientSettings;
+  onUpdate: (patch: Partial<ClientSettings>) => void;
+  onClose: () => void;
+}) {
+  const [targets, setTargets] = useState(settings.targets);
+
+  const sections: { key: keyof Omit<ClientSettings, "targets">; label: string; desc: string }[] = [
+    { key: "showFunnel",          label: "Lead Funnel",           desc: "Conversion stages chart" },
+    { key: "showBudgetDist",      label: "Budget Distribution",   desc: "Spend split across platforms" },
+    { key: "showCampaignTable",   label: "Campaign Table",        desc: "Top campaigns leaderboard" },
+    { key: "showPlatformMetrics", label: "Platform Metrics",      desc: "Deep-dive metrics per platform" },
+    { key: "showCommentary",      label: "Agency Commentary",     desc: "Your notes for this client" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end">
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div className="relative z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Customise Report</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Settings saved per client</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X className="h-4 w-4 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-5 space-y-6">
+          {/* Section Visibility */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Visible Sections</p>
+            <div className="space-y-3">
+              {sections.map(s => (
+                <div key={s.key} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{s.label}</p>
+                    <p className="text-xs text-gray-400">{s.desc}</p>
+                  </div>
+                  <Toggle on={settings[s.key] as boolean} onChange={() => onUpdate({ [s.key]: !settings[s.key] })} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-100" />
+
+          {/* Performance Targets */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Performance Targets</p>
+            <p className="text-xs text-gray-400 mb-3">Set targets to track actuals against what you promised the client</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">CPL Target (₹)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 2000"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={targets.cpl ?? ""}
+                  onChange={e => setTargets(t => ({ ...t, cpl: e.target.value ? Number(e.target.value) : null }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">ROAS Target</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="e.g. 4.0"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={targets.roas ?? ""}
+                  onChange={e => setTargets(t => ({ ...t, roas: e.target.value ? Number(e.target.value) : null }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Lead Volume Target</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 200"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={targets.leads ?? ""}
+                  onChange={e => setTargets(t => ({ ...t, leads: e.target.value ? Number(e.target.value) : null }))}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 border-t border-gray-100">
+          <button
+            onClick={() => { onUpdate({ targets }); onClose(); }}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+          >
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+
 const ClientReports = () => {
   const { toast } = useToast();
   const [selectedClientId, setSelectedClientId] = useState<string>(clients[0].id);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("overall");
   const [datePreset, setDatePreset] = useState<DatePreset>("this_month");
+  const [clientSettings, setClientSettings] = useState<Record<string, ClientSettings>>({});
+  const [showCustomise, setShowCustomise] = useState(false);
   const [customDate] = useState<DateRange | undefined>(() => ({
     from: subDays(new Date(), 14),
     to: new Date(),
@@ -346,6 +539,18 @@ const ClientReports = () => {
     () => clientFunnelData[selectedClientId] ?? clientFunnelData["brightline"],
     [selectedClientId],
   );
+
+  const currentSettings = useMemo(
+    () => clientSettings[selectedClientId] ?? DEFAULT_SETTINGS,
+    [clientSettings, selectedClientId],
+  );
+
+  const updateSettings = (patch: Partial<ClientSettings>) => {
+    setClientSettings(prev => ({
+      ...prev,
+      [selectedClientId]: { ...(prev[selectedClientId] ?? DEFAULT_SETTINGS), ...patch },
+    }));
+  };
 
   const handleSaveNote = () => {
     toast({
@@ -529,10 +734,16 @@ ${currentAgencyNote ? `
                 Per-client platform performance, spend analytics, and agency commentary.
               </p>
             </div>
-            <Button onClick={generateReport} className="gap-2 bg-gray-900 hover:bg-gray-800 text-white">
-              <Download className="h-4 w-4" />
-              Download Report
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setShowCustomise(true)} className="gap-2">
+                <Settings className="h-4 w-4" />
+                Customise
+              </Button>
+              <Button onClick={generateReport} className="gap-2 bg-gray-900 hover:bg-gray-800 text-white">
+                <Download className="h-4 w-4" />
+                Download Report
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -631,6 +842,11 @@ ${currentAgencyNote ? `
                 <span className="text-xs text-blue-600">+0.4x vs last period</span>
               </div>
               <p className="text-xs text-gray-400 mt-1">Revenue ÷ Ad Spend · {platformLabel(selectedPlatform)}</p>
+              {currentSettings.targets.roas && (
+                <div className={`mt-2 inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${roas >= currentSettings.targets.roas ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  Target: {currentSettings.targets.roas}x · {roas >= currentSettings.targets.roas ? "On Track ✓" : "Below Target"}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -666,6 +882,11 @@ ${currentAgencyNote ? `
                 <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
                 <span className="text-xs text-green-600">+8%</span>
               </div>
+              {currentSettings.targets.leads && (
+                <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full ${totalLeads >= currentSettings.targets.leads ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                  Target: {currentSettings.targets.leads} · {totalLeads >= currentSettings.targets.leads ? "On Track ✓" : `${currentSettings.targets.leads - totalLeads} to go`}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -680,6 +901,11 @@ ${currentAgencyNote ? `
                 <TrendingDown className="h-3 w-3 text-green-500 mr-1" />
                 <span className="text-xs text-green-600">-3%</span>
               </div>
+              {currentSettings.targets.cpl && (
+                <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full ${avgCPL <= currentSettings.targets.cpl ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  Target: {formatInr(currentSettings.targets.cpl)} · {avgCPL <= currentSettings.targets.cpl ? "On Track ✓" : "Over Target"}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -701,6 +927,7 @@ ${currentAgencyNote ? `
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Lead Funnel */}
+          {currentSettings.showFunnel &&
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -780,10 +1007,10 @@ ${currentAgencyNote ? `
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           {/* Budget Distribution */}
-          <Card className="border-0 shadow-sm">
+          {currentSettings.showBudgetDist && <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <PieChartIcon className="h-4 w-4 text-purple-600" />
@@ -823,11 +1050,11 @@ ${currentAgencyNote ? `
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card>}
         </div>
 
-        {/* Platform-Specific Metrics */}
-        {selectedPlatform !== "overall" && (
+        {/* Platform-Specific Metrics (old summary grid) + new detailed metrics */}
+        {currentSettings.showPlatformMetrics && selectedPlatform !== "overall" && platformMetricsDetail[selectedPlatform] && (
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
@@ -835,54 +1062,35 @@ ${currentAgencyNote ? `
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {selectedPlatform === "meta_ads" && (
-                  <>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.reach!)}</div><div className="text-sm text-gray-600">Reach</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{platformData.engagementRate}%</div><div className="text-sm text-gray-600">Engagement Rate</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{platformData.roas}x</div><div className="text-sm text-gray-600">ROAS</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.totalLeads)}</div><div className="text-sm text-gray-600">Total Leads</div></div>
-                  </>
-                )}
-                {selectedPlatform === "google_ads" && (
-                  <>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.clicks!)}</div><div className="text-sm text-gray-600">Clicks</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatInr(platformData.cpc!)}</div><div className="text-sm text-gray-600">CPC</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.conversions!)}</div><div className="text-sm text-gray-600">Conversions</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{platformData.roas}x</div><div className="text-sm text-gray-600">ROAS</div></div>
-                  </>
-                )}
-                {selectedPlatform === "google_analytics" && (
-                  <>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.sessions!)}</div><div className="text-sm text-gray-600">Sessions</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{platformData.bounceRate}%</div><div className="text-sm text-gray-600">Bounce Rate</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.goalCompletions!)}</div><div className="text-sm text-gray-600">Goal Completions</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.totalLeads)}</div><div className="text-sm text-gray-600">Total Leads</div></div>
-                  </>
-                )}
-                {selectedPlatform === "seo" && (
-                  <>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.organicClicks!)}</div><div className="text-sm text-gray-600">Organic Clicks</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">#{platformData.topKeywordPosition}</div><div className="text-sm text-gray-600">Top Position</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{platformData.domainAuthority}</div><div className="text-sm text-gray-600">Domain Authority</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.totalLeads)}</div><div className="text-sm text-gray-600">Total Leads</div></div>
-                  </>
-                )}
-                {selectedPlatform === "linkedin_ads" && (
-                  <>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.clicks!)}</div><div className="text-sm text-gray-600">Clicks</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{platformData.engagementRate}%</div><div className="text-sm text-gray-600">Engagement Rate</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatInr(platformData.costPerLead!)}</div><div className="text-sm text-gray-600">Cost per Lead</div></div>
-                    <div className="text-center"><div className="text-2xl font-bold">{formatNumber(platformData.totalLeads)}</div><div className="text-sm text-gray-600">Total Leads</div></div>
-                  </>
-                )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {platformMetricsDetail[selectedPlatform]!.map((metric) => {
+                  const s = METRIC_STATUS[metric.status];
+                  return (
+                    <div key={metric.label} className="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-500">{metric.label}</span>
+                        <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                      </div>
+                      <p className="text-xl font-bold text-gray-900 tabular-nums">{metric.value}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className={`text-xs font-medium flex items-center gap-0.5 ${metric.trendPositive ? "text-emerald-600" : "text-red-500"}`}>
+                          {metric.trendPositive ? <TrendingUp className="h-3 w-3" /> : <TrendDown className="h-3 w-3" />}
+                          {metric.trend}
+                        </span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${s.badge}`}>
+                          {metric.benchmark}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Campaign Leaderboard */}
-        {(selectedPlatform === "meta_ads" || selectedPlatform === "google_ads" || selectedPlatform === "linkedin_ads") && (
+        {currentSettings.showCampaignTable && (selectedPlatform === "meta_ads" || selectedPlatform === "google_ads" || selectedPlatform === "linkedin_ads") && (
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-semibold">
@@ -917,7 +1125,7 @@ ${currentAgencyNote ? `
         )}
 
         {/* Agency Commentary */}
-        <Card className="border-0 shadow-sm">
+        {currentSettings.showCommentary && <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <FileText className="h-4 w-4 text-orange-600" />
@@ -941,7 +1149,7 @@ ${currentAgencyNote ? `
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Footer summary */}
         <Card className="border-0 shadow-sm bg-gray-50">
@@ -960,6 +1168,14 @@ ${currentAgencyNote ? `
           </CardContent>
         </Card>
       </div>
+
+      {showCustomise && (
+        <CustomisePanel
+          settings={currentSettings}
+          onUpdate={updateSettings}
+          onClose={() => setShowCustomise(false)}
+        />
+      )}
     </DashboardLayout>
   );
 };
