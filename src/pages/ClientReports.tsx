@@ -126,12 +126,47 @@ function mkFunnel(total: number, rates: [number, number, number, number]): Funne
   ];
 }
 
-const clientRevenueData: Record<string, { closedDeals: number; revenue: number }> = {
-  brightline: { closedDeals: 14, revenue: 2100000 },
-  vertex:     { closedDeals: 9,  revenue: 1440000 },
-  northwind:  { closedDeals: 7,  revenue: 980000  },
-  harbor:     { closedDeals: 11, revenue: 1650000 },
-  bluepeak:   { closedDeals: 18, revenue: 3240000 },
+const clientRevenueData: Record<string, Record<Platform, { closedDeals: number; revenue: number }>> = {
+  brightline: {
+    overall:          { closedDeals: 14, revenue: 2100000 },
+    meta_ads:         { closedDeals: 10, revenue: 1520000 },
+    google_ads:       { closedDeals: 12, revenue: 1840000 },
+    linkedin_ads:     { closedDeals: 7,  revenue: 1050000 },
+    seo:              { closedDeals: 4,  revenue: 580000  },
+    google_analytics: { closedDeals: 1,  revenue: 140000  },
+  },
+  vertex: {
+    overall:          { closedDeals: 9,  revenue: 1440000 },
+    meta_ads:         { closedDeals: 3,  revenue: 480000  },
+    google_ads:       { closedDeals: 5,  revenue: 800000  },
+    linkedin_ads:     { closedDeals: 8,  revenue: 1280000 },
+    seo:              { closedDeals: 2,  revenue: 320000  },
+    google_analytics: { closedDeals: 1,  revenue: 160000  },
+  },
+  northwind: {
+    overall:          { closedDeals: 7,  revenue: 980000  },
+    meta_ads:         { closedDeals: 5,  revenue: 720000  },
+    google_ads:       { closedDeals: 4,  revenue: 560000  },
+    linkedin_ads:     { closedDeals: 2,  revenue: 280000  },
+    seo:              { closedDeals: 6,  revenue: 840000  },
+    google_analytics: { closedDeals: 2,  revenue: 280000  },
+  },
+  harbor: {
+    overall:          { closedDeals: 11, revenue: 1650000 },
+    meta_ads:         { closedDeals: 8,  revenue: 1200000 },
+    google_ads:       { closedDeals: 7,  revenue: 1050000 },
+    linkedin_ads:     { closedDeals: 6,  revenue: 900000  },
+    seo:              { closedDeals: 3,  revenue: 420000  },
+    google_analytics: { closedDeals: 1,  revenue: 150000  },
+  },
+  bluepeak: {
+    overall:          { closedDeals: 18, revenue: 3240000 },
+    meta_ads:         { closedDeals: 14, revenue: 2520000 },
+    google_ads:       { closedDeals: 12, revenue: 2160000 },
+    linkedin_ads:     { closedDeals: 8,  revenue: 1440000 },
+    seo:              { closedDeals: 5,  revenue: 900000  },
+    google_analytics: { closedDeals: 2,  revenue: 360000  },
+  },
 };
 
 type MetricStatus = "good" | "warn" | "bad";
@@ -550,8 +585,8 @@ const ClientReports = () => {
   );
 
   const { closedDeals, revenue } = useMemo(
-    () => clientRevenueData[selectedClientId] ?? { closedDeals: 0, revenue: 0 },
-    [selectedClientId],
+    () => clientRevenueData[selectedClientId]?.[selectedPlatform] ?? { closedDeals: 0, revenue: 0 },
+    [selectedClientId, selectedPlatform],
   );
 
   const roas = useMemo(
