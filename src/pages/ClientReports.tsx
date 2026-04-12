@@ -36,13 +36,15 @@ import {
 type DatePreset = "last_7_days" | "this_month" | "last_month" | "custom";
 type Platform = "overall" | "meta_ads" | "google_ads" | "google_analytics" | "seo" | "linkedin_ads";
 
+type PlatformTargets = { cpl: number | null; roas: number | null; leads: number | null };
+
 type ClientSettings = {
   showFunnel: boolean;
   showBudgetDist: boolean;
   showCampaignTable: boolean;
   showPlatformMetrics: boolean;
   showCommentary: boolean;
-  targets: { cpl: number | null; roas: number | null; leads: number | null };
+  targets: Partial<Record<Platform, PlatformTargets>>;
 };
 
 const DEFAULT_SETTINGS: ClientSettings = {
@@ -51,8 +53,17 @@ const DEFAULT_SETTINGS: ClientSettings = {
   showCampaignTable: true,
   showPlatformMetrics: true,
   showCommentary: true,
-  targets: { cpl: null, roas: null, leads: null },
+  targets: {},
 };
+
+const PLATFORM_TABS: { key: Platform; label: string }[] = [
+  { key: "overall",          label: "Overall" },
+  { key: "meta_ads",         label: "Meta" },
+  { key: "google_ads",       label: "Google" },
+  { key: "linkedin_ads",     label: "LinkedIn" },
+  { key: "seo",              label: "SEO" },
+  { key: "google_analytics", label: "GA" },
+];
 
 type Client = {
   id: string;
@@ -331,14 +342,26 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 
 function CustomisePanel({
   settings,
+  activePlatform,
   onUpdate,
   onClose,
 }: {
   settings: ClientSettings;
+  activePlatform: Platform;
   onUpdate: (patch: Partial<ClientSettings>) => void;
   onClose: () => void;
 }) {
-  const [targets, setTargets] = useState(settings.targets);
+  const [targets, setTargets] = useState<Partial<Record<Platform, PlatformTargets>>>(settings.targets);
+  const [activeTab, setActiveTab] = useState<Platform>(activePlatform);
+
+  const tabTargets = targets[activeTab] ?? { cpl: null, roas: null, leads: null };
+
+  const setTabTarget = (key: keyof PlatformTargets, val: number | null) => {
+    setTargets(prev => ({
+      ...prev,
+      [activeTab]: { ...(prev[activeTab] ?? { cpl: null, roas: null, leads: null }), [key]: val },
+    }));
+  };
 
   const sections: { key: keyof Omit<ClientSettings, "targets">; label: string; desc: string }[] = [
     { key: "showFunnel",          label: "Lead Funnel",           desc: "Conversion stages chart" },
@@ -384,16 +407,44 @@ function CustomisePanel({
           {/* Performance Targets */}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Performance Targets</p>
-            <p className="text-xs text-gray-400 mb-3">Set targets to track actuals against what you promised the client</p>
-            <div className="space-y-3">
+            <p className="text-xs text-gray-400 mb-3">Set per platform — targets show as on-track badges on KPI cards</p>
+
+            {/* Platform pills */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {PLATFORM_TABS.map(p => {
+                const hasTargets = targets[p.key] && Object.values(targets[p.key]!).some(v => v !== null);
+                return (
+                  <button
+                    key={p.key}
+                    onClick={() => setActiveTab(p.key)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors relative ${
+                      activeTab === p.key
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {p.label}
+                    {hasTargets && activeTab !== p.key && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Inputs for active tab */}
+            <div className="space-y-3 bg-gray-50 rounded-xl p-3">
+              <p className="text-xs font-medium text-gray-500 mb-2">
+                {PLATFORM_TABS.find(p => p.key === activeTab)?.label} targets
+              </p>
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">CPL Target (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 2000"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={targets.cpl ?? ""}
-                  onChange={e => setTargets(t => ({ ...t, cpl: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={tabTargets.cpl ?? ""}
+                  onChange={e => setTabTarget("cpl", e.target.value ? Number(e.target.value) : null)}
                 />
               </div>
               <div>
@@ -402,9 +453,9 @@ function CustomisePanel({
                   type="number"
                   step="0.1"
                   placeholder="e.g. 4.0"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={targets.roas ?? ""}
-                  onChange={e => setTargets(t => ({ ...t, roas: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={tabTargets.roas ?? ""}
+                  onChange={e => setTabTarget("roas", e.target.value ? Number(e.target.value) : null)}
                 />
               </div>
               <div>
@@ -412,9 +463,9 @@ function CustomisePanel({
                 <input
                   type="number"
                   placeholder="e.g. 200"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={targets.leads ?? ""}
-                  onChange={e => setTargets(t => ({ ...t, leads: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={tabTargets.leads ?? ""}
+                  onChange={e => setTabTarget("leads", e.target.value ? Number(e.target.value) : null)}
                 />
               </div>
             </div>
@@ -842,9 +893,9 @@ ${currentAgencyNote ? `
                 <span className="text-xs text-blue-600">+0.4x vs last period</span>
               </div>
               <p className="text-xs text-gray-400 mt-1">Revenue ÷ Ad Spend · {platformLabel(selectedPlatform)}</p>
-              {currentSettings.targets.roas && (
-                <div className={`mt-2 inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${roas >= currentSettings.targets.roas ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-                  Target: {currentSettings.targets.roas}x · {roas >= currentSettings.targets.roas ? "On Track ✓" : "Below Target"}
+              {currentSettings.targets[selectedPlatform]?.roas && (
+                <div className={`mt-2 inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${roas >= currentSettings.targets[selectedPlatform]!.roas! ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  Target: {currentSettings.targets[selectedPlatform]!.roas}x · {roas >= currentSettings.targets[selectedPlatform]!.roas! ? "On Track ✓" : "Below Target"}
                 </div>
               )}
             </CardContent>
@@ -882,9 +933,9 @@ ${currentAgencyNote ? `
                 <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
                 <span className="text-xs text-green-600">+8%</span>
               </div>
-              {currentSettings.targets.leads && (
-                <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full ${totalLeads >= currentSettings.targets.leads ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                  Target: {currentSettings.targets.leads} · {totalLeads >= currentSettings.targets.leads ? "On Track ✓" : `${currentSettings.targets.leads - totalLeads} to go`}
+              {currentSettings.targets[selectedPlatform]?.leads && (
+                <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full ${totalLeads >= currentSettings.targets[selectedPlatform]!.leads! ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                  Target: {currentSettings.targets[selectedPlatform]!.leads} · {totalLeads >= currentSettings.targets[selectedPlatform]!.leads! ? "On Track ✓" : `${currentSettings.targets[selectedPlatform]!.leads! - totalLeads} to go`}
                 </div>
               )}
             </CardContent>
@@ -901,9 +952,9 @@ ${currentAgencyNote ? `
                 <TrendingDown className="h-3 w-3 text-green-500 mr-1" />
                 <span className="text-xs text-green-600">-3%</span>
               </div>
-              {currentSettings.targets.cpl && (
-                <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full ${avgCPL <= currentSettings.targets.cpl ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-                  Target: {formatInr(currentSettings.targets.cpl)} · {avgCPL <= currentSettings.targets.cpl ? "On Track ✓" : "Over Target"}
+              {currentSettings.targets[selectedPlatform]?.cpl && (
+                <div className={`mt-2 text-xs font-medium px-2 py-0.5 rounded-full ${avgCPL <= currentSettings.targets[selectedPlatform]!.cpl! ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  Target: {formatInr(currentSettings.targets[selectedPlatform]!.cpl!)} · {avgCPL <= currentSettings.targets[selectedPlatform]!.cpl! ? "On Track ✓" : "Over Target"}
                 </div>
               )}
             </CardContent>
@@ -1172,6 +1223,7 @@ ${currentAgencyNote ? `
       {showCustomise && (
         <CustomisePanel
           settings={currentSettings}
+          activePlatform={selectedPlatform}
           onUpdate={updateSettings}
           onClose={() => setShowCustomise(false)}
         />
