@@ -291,15 +291,27 @@ const clientCampaignData: Record<string, Record<string, { name: string; spend: n
   },
 };
 
-// ─── Per-client, per-platform lead funnel (derived from clientPlatformData totals) ──
+// ─── Explicit funnel lead totals per client per platform ─────────────────────
+// These represent leads that entered the CRM pipeline from each platform.
+// Kept separate from performance totalLeads so each funnel tells its own story.
+const FUNNEL_TOTALS: Record<string, Record<Platform, number>> = {
+  //             overall  meta   google linkedin  seo    ga
+  brightline: { overall: 180, meta_ads: 130, google_ads: 95,  linkedin_ads: 42, seo: 62,  google_analytics: 28 },
+  vertex:     { overall: 120, meta_ads:  48, google_ads: 72,  linkedin_ads: 85, seo: 38,  google_analytics: 18 },
+  northwind:  { overall: 100, meta_ads:  78, google_ads: 56,  linkedin_ads: 22, seo: 94,  google_analytics: 36 },
+  harbor:     { overall: 160, meta_ads: 112, google_ads: 84,  linkedin_ads: 58, seo: 44,  google_analytics: 24 },
+  bluepeak:   { overall: 220, meta_ads: 158, google_ads: 122, linkedin_ads: 72, seo: 74,  google_analytics: 44 },
+};
+
+// ─── Per-client, per-platform lead funnel ────────────────────────────────────
 const clientPlatformFunnelData: Record<string, Record<Platform, FunnelStage[]>> = Object.fromEntries(
-  Object.entries(clientPlatformData).map(([cid, platforms]) => [
+  Object.entries(FUNNEL_TOTALS).map(([cid, platforms]) => [
     cid,
     Object.fromEntries(
-      Object.entries(platforms).map(([plat, d]) => [
+      Object.entries(platforms).map(([plat, total]) => [
         plat,
         mkFunnel(
-          d.totalLeads,
+          total,
           plat === "overall"
             ? CLIENT_OVERALL_RATES[cid] ?? [0.70, 0.54, 0.42, 0.44]
             : PLATFORM_FUNNEL_RATES[plat as Platform] ?? [0.70, 0.52, 0.42, 0.40],
