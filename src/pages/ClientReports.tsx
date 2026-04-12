@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-import { format, subDays, eachDayOfInterval, eachWeekOfInterval } from "date-fns";
-import type { DateRange } from "react-day-picker";
 import {
   ResponsiveContainer,
   PieChart,
@@ -197,138 +195,103 @@ const platformSpendData = [
   { name: "Google Analytics", value: 7, fill: "#6b7280" },
 ];
 
-const platformPerformanceData: Record<Platform, {
+// ─── Helper: distribute totals across 7 days ─────────────────────────────────
+const W = [0.15, 0.18, 0.12, 0.16, 0.20, 0.11, 0.08]; // Mon–Sun weights
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const wld = (leads: number, spend: number) =>
+  DAYS.map((date, i) => ({ date, leads: Math.round(leads * W[i]), spend: Math.round(spend * W[i]) }));
+
+type PlatPerf = {
   totalSpend: number; totalLeads: number; cpl: number;
   reach?: number; clicks?: number; conversions?: number; sessions?: number;
   organicClicks?: number; engagementRate?: number; qualityScore?: number;
   roas?: number; bounceRate?: number; topKeywordPosition?: number;
   domainAuthority?: number; costPerLead?: number; goalCompletions?: number; cpc?: number;
-}> = {
-  overall: { totalSpend: 450000, totalLeads: 180, cpl: 2500 },
-  meta_ads: { totalSpend: 202500, totalLeads: 81, cpl: 2500, reach: 2450000, engagementRate: 2.8, roas: 3.8 },
-  google_ads: { totalSpend: 135000, totalLeads: 54, cpl: 2500, clicks: 5400, conversions: 54, qualityScore: 7.2, roas: 4.1, cpc: 25 },
-  google_analytics: { totalSpend: 0, totalLeads: 45, cpl: 0, sessions: 45000, bounceRate: 42, goalCompletions: 23 },
-  seo: { totalSpend: 36000, totalLeads: 27, cpl: 1333, organicClicks: 27000, topKeywordPosition: 3, domainAuthority: 45 },
-  linkedin_ads: { totalSpend: 45000, totalLeads: 18, cpl: 2500, clicks: 1800, engagementRate: 2.8, costPerLead: 2500 },
 };
 
-const platformLeadsData: Record<Platform, { date: string; leads: number; spend: number; lastMonthLeads?: number }[]> = {
-  overall: [
-    { date: "Mon", leads: 24, spend: 45000, lastMonthLeads: 20 },
-    { date: "Tue", leads: 32, spend: 52000, lastMonthLeads: 28 },
-    { date: "Wed", leads: 18, spend: 38000, lastMonthLeads: 15 },
-    { date: "Thu", leads: 28, spend: 48000, lastMonthLeads: 24 },
-    { date: "Fri", leads: 35, spend: 55000, lastMonthLeads: 30 },
-    { date: "Sat", leads: 22, spend: 42000, lastMonthLeads: 18 },
-    { date: "Sun", leads: 15, spend: 35000, lastMonthLeads: 12 },
-  ],
-  meta_ads: [
-    { date: "Mon", leads: 12, spend: 20250, lastMonthLeads: 10 },
-    { date: "Tue", leads: 16, spend: 23400, lastMonthLeads: 14 },
-    { date: "Wed", leads: 9, spend: 17100, lastMonthLeads: 7 },
-    { date: "Thu", leads: 14, spend: 21600, lastMonthLeads: 12 },
-    { date: "Fri", leads: 18, spend: 24750, lastMonthLeads: 15 },
-    { date: "Sat", leads: 11, spend: 18900, lastMonthLeads: 9 },
-    { date: "Sun", leads: 7, spend: 15750, lastMonthLeads: 5 },
-  ],
-  google_ads: [
-    { date: "Mon", leads: 8, spend: 13500, lastMonthLeads: 6 },
-    { date: "Tue", leads: 11, spend: 15600, lastMonthLeads: 9 },
-    { date: "Wed", leads: 6, spend: 11400, lastMonthLeads: 5 },
-    { date: "Thu", leads: 9, spend: 14400, lastMonthLeads: 7 },
-    { date: "Fri", leads: 11, spend: 16500, lastMonthLeads: 9 },
-    { date: "Sat", leads: 7, spend: 12600, lastMonthLeads: 5 },
-    { date: "Sun", leads: 5, spend: 10500, lastMonthLeads: 4 },
-  ],
-  google_analytics: [
-    { date: "Mon", leads: 6, spend: 0, lastMonthLeads: 5 },
-    { date: "Tue", leads: 8, spend: 0, lastMonthLeads: 6 },
-    { date: "Wed", leads: 4, spend: 0, lastMonthLeads: 3 },
-    { date: "Thu", leads: 6, spend: 0, lastMonthLeads: 5 },
-    { date: "Fri", leads: 8, spend: 0, lastMonthLeads: 6 },
-    { date: "Sat", leads: 5, spend: 0, lastMonthLeads: 4 },
-    { date: "Sun", leads: 3, spend: 0, lastMonthLeads: 2 },
-  ],
-  seo: [
-    { date: "Mon", leads: 4, spend: 3600, lastMonthLeads: 3 },
-    { date: "Tue", leads: 5, spend: 4500, lastMonthLeads: 4 },
-    { date: "Wed", leads: 3, spend: 2700, lastMonthLeads: 2 },
-    { date: "Thu", leads: 4, spend: 3600, lastMonthLeads: 3 },
-    { date: "Fri", leads: 5, spend: 4500, lastMonthLeads: 4 },
-    { date: "Sat", leads: 3, spend: 2700, lastMonthLeads: 2 },
-    { date: "Sun", leads: 2, spend: 1800, lastMonthLeads: 1 },
-  ],
-  linkedin_ads: [
-    { date: "Mon", leads: 3, spend: 4500, lastMonthLeads: 2 },
-    { date: "Tue", leads: 4, spend: 6000, lastMonthLeads: 3 },
-    { date: "Wed", leads: 2, spend: 3000, lastMonthLeads: 1 },
-    { date: "Thu", leads: 3, spend: 4500, lastMonthLeads: 2 },
-    { date: "Fri", leads: 4, spend: 6000, lastMonthLeads: 3 },
-    { date: "Sat", leads: 2, spend: 3000, lastMonthLeads: 1 },
-    { date: "Sun", leads: 1, spend: 1500, lastMonthLeads: 0 },
-  ],
+// ─── Per-client, per-platform performance data ────────────────────────────────
+const clientPlatformData: Record<string, Record<Platform, PlatPerf>> = {
+  brightline: {
+    overall:          { totalSpend: 450000, totalLeads: 180, cpl: 2500 },
+    meta_ads:         { totalSpend: 202500, totalLeads: 81,  cpl: 2500, reach: 2450000, engagementRate: 2.8, roas: 3.8 },
+    google_ads:       { totalSpend: 135000, totalLeads: 54,  cpl: 2500, clicks: 5400,   conversions: 54,  qualityScore: 7.2, roas: 4.1, cpc: 25 },
+    google_analytics: { totalSpend: 0,      totalLeads: 45,  cpl: 0,    sessions: 45000, bounceRate: 42, goalCompletions: 23 },
+    seo:              { totalSpend: 36000,  totalLeads: 27,  cpl: 1333, organicClicks: 27000, topKeywordPosition: 3, domainAuthority: 45 },
+    linkedin_ads:     { totalSpend: 45000,  totalLeads: 18,  cpl: 2500, clicks: 1800,   engagementRate: 2.8, costPerLead: 2500 },
+  },
+  vertex: {
+    overall:          { totalSpend: 320000, totalLeads: 95,  cpl: 3368 },
+    meta_ads:         { totalSpend: 64000,  totalLeads: 19,  cpl: 3368, reach: 980000,  engagementRate: 1.9, roas: 2.8 },
+    google_ads:       { totalSpend: 96000,  totalLeads: 28,  cpl: 3429, clicks: 3200,   conversions: 28,  qualityScore: 6.8, roas: 3.2, cpc: 30 },
+    google_analytics: { totalSpend: 0,      totalLeads: 18,  cpl: 0,    sessions: 18000, bounceRate: 35, goalCompletions: 12 },
+    seo:              { totalSpend: 48000,  totalLeads: 15,  cpl: 3200, organicClicks: 12000, topKeywordPosition: 7, domainAuthority: 38 },
+    linkedin_ads:     { totalSpend: 112000, totalLeads: 33,  cpl: 3394, clicks: 2800,   engagementRate: 3.4, costPerLead: 3394 },
+  },
+  northwind: {
+    overall:          { totalSpend: 300000, totalLeads: 142, cpl: 2113 },
+    meta_ads:         { totalSpend: 90000,  totalLeads: 43,  cpl: 2093, reach: 1800000, engagementRate: 3.1, roas: 3.2 },
+    google_ads:       { totalSpend: 75000,  totalLeads: 35,  cpl: 2143, clicks: 4200,   conversions: 35,  qualityScore: 7.5, roas: 3.6, cpc: 18 },
+    google_analytics: { totalSpend: 0,      totalLeads: 28,  cpl: 0,    sessions: 62000, bounceRate: 38, goalCompletions: 31 },
+    seo:              { totalSpend: 60000,  totalLeads: 36,  cpl: 1667, organicClicks: 48000, topKeywordPosition: 2, domainAuthority: 62 },
+    linkedin_ads:     { totalSpend: 30000,  totalLeads: 8,   cpl: 3750, clicks: 900,    engagementRate: 2.2, costPerLead: 3750 },
+  },
+  harbor: {
+    overall:          { totalSpend: 420000, totalLeads: 160, cpl: 2625 },
+    meta_ads:         { totalSpend: 168000, totalLeads: 64,  cpl: 2625, reach: 2100000, engagementRate: 2.5, roas: 3.5 },
+    google_ads:       { totalSpend: 126000, totalLeads: 48,  cpl: 2625, clicks: 4800,   conversions: 48,  qualityScore: 7.0, roas: 3.9, cpc: 26 },
+    google_analytics: { totalSpend: 0,      totalLeads: 22,  cpl: 0,    sessions: 38000, bounceRate: 44, goalCompletions: 18 },
+    seo:              { totalSpend: 42000,  totalLeads: 16,  cpl: 2625, organicClicks: 22000, topKeywordPosition: 5, domainAuthority: 41 },
+    linkedin_ads:     { totalSpend: 84000,  totalLeads: 32,  cpl: 2625, clicks: 2400,   engagementRate: 3.0, costPerLead: 2625 },
+  },
+  bluepeak: {
+    overall:          { totalSpend: 550000, totalLeads: 220, cpl: 2500 },
+    meta_ads:         { totalSpend: 220000, totalLeads: 88,  cpl: 2500, reach: 3200000, engagementRate: 3.4, roas: 4.8 },
+    google_ads:       { totalSpend: 165000, totalLeads: 66,  cpl: 2500, clicks: 7200,   conversions: 66,  qualityScore: 8.1, roas: 5.2, cpc: 23 },
+    google_analytics: { totalSpend: 0,      totalLeads: 55,  cpl: 0,    sessions: 78000, bounceRate: 36, goalCompletions: 42 },
+    seo:              { totalSpend: 44000,  totalLeads: 33,  cpl: 1333, organicClicks: 35000, topKeywordPosition: 1, domainAuthority: 71 },
+    linkedin_ads:     { totalSpend: 110000, totalLeads: 44,  cpl: 2500, clicks: 3600,   engagementRate: 3.8, costPerLead: 2500 },
+  },
 };
 
-const campaignLeaderboardData: Record<string, { name: string; spend: number; leads: number; cpl: number }[]> = {
-  meta_ads: [
-    { name: "Festive Sale Campaign", spend: 85000, leads: 245, cpl: 347 },
-    { name: "Product Launch Ads", spend: 62000, leads: 189, cpl: 328 },
-    { name: "Retargeting Campaign", spend: 48000, leads: 142, cpl: 338 },
-    { name: "Brand Awareness Q1", spend: 35000, leads: 98, cpl: 357 },
-  ],
-  google_ads: [
-    { name: "Search Campaign - Q1", spend: 92000, leads: 312, cpl: 295 },
-    { name: "Display Network", spend: 58000, leads: 198, cpl: 293 },
-    { name: "YouTube Ads", spend: 35000, leads: 98, cpl: 357 },
-    { name: "Shopping Campaign", spend: 28000, leads: 85, cpl: 329 },
-  ],
-  linkedin_ads: [
-    { name: "Lead Gen Forms", spend: 45000, leads: 89, cpl: 506 },
-    { name: "Sponsored Content", spend: 32000, leads: 61, cpl: 525 },
-    { name: "Thought Leadership", spend: 28000, leads: 52, cpl: 538 },
-  ],
+// ─── Per-client, per-platform chart data (derived from totals) ────────────────
+const clientLeadsData: Record<string, Record<Platform, { date: string; leads: number; spend: number }[]>> = Object.fromEntries(
+  Object.entries(clientPlatformData).map(([cid, platforms]) => [
+    cid,
+    Object.fromEntries(
+      Object.entries(platforms).map(([plat, d]) => [plat, wld(d.totalLeads, d.totalSpend)])
+    ),
+  ])
+) as Record<string, Record<Platform, { date: string; leads: number; spend: number }[]>>;
+
+// ─── Per-client, per-platform campaign leaderboard ────────────────────────────
+const clientCampaignData: Record<string, Record<string, { name: string; spend: number; leads: number; cpl: number }[]>> = {
+  brightline: {
+    meta_ads:     [{ name: "Festive Dhamaka Sale",        spend: 90000, leads: 40, cpl: 2250 }, { name: "New Product Launch — Juices", spend: 70000, leads: 28, cpl: 2500 }, { name: "Retargeting — Cart Abandonment", spend: 42500, leads: 13, cpl: 3269 }],
+    google_ads:   [{ name: "Brand Search — BrightLine",   spend: 60000, leads: 24, cpl: 2500 }, { name: "Food Enthusiasts — Display",   spend: 45000, leads: 18, cpl: 2500 }, { name: "Competitor Keywords",           spend: 30000, leads: 12, cpl: 2500 }],
+    linkedin_ads: [{ name: "B2B Food Distribution",       spend: 22000, leads:  9, cpl: 2444 }, { name: "Retail Partner Outreach",      spend: 15000, leads:  6, cpl: 2500 }, { name: "Franchise Opportunities",       spend:  8000, leads:  3, cpl: 2667 }],
+  },
+  vertex: {
+    meta_ads:     [{ name: "Product Demo — SaaS",          spend: 32000, leads: 10, cpl: 3200 }, { name: "Case Study Promotion",         spend: 20000, leads:  6, cpl: 3333 }, { name: "Retargeting — Website Visitors",spend: 12000, leads:  3, cpl: 4000 }],
+    google_ads:   [{ name: "Brand + Product Search",        spend: 48000, leads: 14, cpl: 3429 }, { name: "Competitor Keywords",          spend: 30000, leads:  9, cpl: 3333 }, { name: "Remarketing — Trial Users",     spend: 18000, leads:  5, cpl: 3600 }],
+    linkedin_ads: [{ name: "Decision Maker Targeting",      spend: 56000, leads: 16, cpl: 3500 }, { name: "IT Manager Campaign",          spend: 35000, leads: 10, cpl: 3500 }, { name: "Series A Announcement",        spend: 21000, leads:  7, cpl: 3000 }],
+  },
+  northwind: {
+    meta_ads:     [{ name: "Content Subscription Drive",   spend: 45000, leads: 22, cpl: 2045 }, { name: "Brand Awareness Q2",          spend: 28000, leads: 14, cpl: 2000 }, { name: "Newsletter Signup Campaign",   spend: 17000, leads:  7, cpl: 2429 }],
+    google_ads:   [{ name: "Media Buying Search",           spend: 38000, leads: 18, cpl: 2111 }, { name: "Programmatic Awareness",       spend: 24000, leads: 11, cpl: 2182 }, { name: "Display Retargeting",         spend: 13000, leads:  6, cpl: 2167 }],
+    linkedin_ads: [{ name: "Agency Partnership",            spend: 16000, leads:  4, cpl: 4000 }, { name: "B2B Media Outreach",           spend: 10000, leads:  3, cpl: 3333 }, { name: "Thought Leadership Ads",      spend:  4000, leads:  1, cpl: 4000 }],
+  },
+  harbor: {
+    meta_ads:     [{ name: "Professional Services — Awareness",spend: 80000, leads: 30, cpl: 2667 }, { name: "SME Lead Generation",      spend: 55000, leads: 21, cpl: 2619 }, { name: "Retargeting Campaign",        spend: 33000, leads: 13, cpl: 2538 }],
+    google_ads:   [{ name: "Services Search Campaign",     spend: 63000, leads: 24, cpl: 2625 }, { name: "Brand Protection",             spend: 40000, leads: 15, cpl: 2667 }, { name: "Display Network",              spend: 23000, leads:  9, cpl: 2556 }],
+    linkedin_ads: [{ name: "C-Suite Targeting",            spend: 42000, leads: 16, cpl: 2625 }, { name: "Financial Services Campaign",  spend: 28000, leads: 11, cpl: 2545 }, { name: "Partnership Outreach",        spend: 14000, leads:  5, cpl: 2800 }],
+  },
+  bluepeak: {
+    meta_ads:     [{ name: "Fintech App Install",           spend: 105000, leads: 42, cpl: 2500 }, { name: "Loan Product Campaign",      spend:  75000, leads: 30, cpl: 2500 }, { name: "Investment Platform Ads",    spend:  40000, leads: 16, cpl: 2500 }],
+    google_ads:   [{ name: "Finance Keywords — Search",     spend:  82000, leads: 33, cpl: 2485 }, { name: "Competitor Bidding",         spend:  50000, leads: 20, cpl: 2500 }, { name: "YouTube Fintech",            spend:  33000, leads: 13, cpl: 2538 }],
+    linkedin_ads: [{ name: "HNI Investor Targeting",        spend:  55000, leads: 22, cpl: 2500 }, { name: "Corporate Finance Campaign", spend:  35000, leads: 14, cpl: 2500 }, { name: "Startup Ecosystem",          spend:  20000, leads:  8, cpl: 2500 }],
+  },
 };
 
-function buildLeadsData(preset: DatePreset, custom: DateRange | undefined): { date: string; leads: number; spend: number }[] {
-  const today = new Date();
-  if (preset === "last_7_days") {
-    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => ({
-      date: label,
-      leads: 15 + Math.floor(Math.random() * 25),
-      spend: 30000 + Math.floor(Math.random() * 30000),
-    }));
-  }
-  if (preset === "this_month") {
-    return ["W1", "W2", "W3", "W4"].map((label) => ({
-      date: label,
-      leads: 80 + Math.floor(Math.random() * 120),
-      spend: 150000 + Math.floor(Math.random() * 200000),
-    }));
-  }
-  if (preset === "last_month") {
-    return ["W1", "W2", "W3", "W4"].map((label) => ({
-      date: label,
-      leads: 70 + Math.floor(Math.random() * 100),
-      spend: 120000 + Math.floor(Math.random() * 180000),
-    }));
-  }
-  const from = custom?.from ?? subDays(today, 14);
-  const to = custom?.to ?? today;
-  const days = eachDayOfInterval({ start: from, end: to });
-  if (days.length <= 14) {
-    return days.map((d) => ({
-      date: format(d, "d MMM"),
-      leads: 10 + Math.floor(Math.random() * 30),
-      spend: 25000 + Math.floor(Math.random() * 35000),
-    }));
-  }
-  const weeks = eachWeekOfInterval({ start: from, end: to }, { weekStartsOn: 1 });
-  return weeks.map((w) => ({
-    date: format(w, "d MMM"),
-    leads: 60 + Math.floor(Math.random() * 140),
-    spend: 100000 + Math.floor(Math.random() * 250000),
-  }));
-}
 
 // ─── Customise Panel ──────────────────────────────────────────────────────────
 
@@ -494,10 +457,6 @@ const ClientReports = () => {
   const [datePreset, setDatePreset] = useState<DatePreset>("this_month");
   const [clientSettings, setClientSettings] = useState<Record<string, ClientSettings>>({});
   const [showCustomise, setShowCustomise] = useState(false);
-  const [customDate] = useState<DateRange | undefined>(() => ({
-    from: subDays(new Date(), 14),
-    to: new Date(),
-  }));
   const [platformCommentary, setPlatformCommentary] = useState<Record<string, Record<string, string>>>(() => ({
     brightline: {
       overall: "Overall performance is strong with consistent lead generation across all platforms.",
@@ -546,34 +505,20 @@ const ClientReports = () => {
     [selectedClientId],
   );
 
-  const platformData = useMemo(() => platformPerformanceData[selectedPlatform], [selectedPlatform]);
-  const currentLeadsData = useMemo(() => platformLeadsData[selectedPlatform], [selectedPlatform]);
-  const leadsData = useMemo(() => buildLeadsData(datePreset, customDate), [datePreset, customDate]);
+  const platformData = useMemo(
+    () => clientPlatformData[selectedClientId]?.[selectedPlatform] ?? clientPlatformData["brightline"]["overall"],
+    [selectedClientId, selectedPlatform],
+  );
   const currentAgencyNote = useMemo(
     () => platformCommentary[selectedClientId]?.[selectedPlatform] || "",
     [selectedClientId, selectedPlatform, platformCommentary],
   );
 
-  const totalSpend = useMemo(
-    () =>
-      selectedPlatform === "overall"
-        ? leadsData.reduce((sum, day) => sum + day.spend, 0)
-        : currentLeadsData.reduce((sum, day) => sum + day.spend, 0),
-    [leadsData, currentLeadsData, selectedPlatform],
-  );
-
-  const totalLeads = useMemo(
-    () =>
-      selectedPlatform === "overall"
-        ? leadsData.reduce((sum, day) => sum + day.leads, 0)
-        : currentLeadsData.reduce((sum, day) => sum + day.leads, 0),
-    [leadsData, currentLeadsData, selectedPlatform],
-  );
-
+  const totalSpend = useMemo(() => platformData.totalSpend, [platformData]);
+  const totalLeads = useMemo(() => platformData.totalLeads, [platformData]);
   const avgCPL = useMemo(
-    () =>
-      selectedPlatform === "overall" ? (totalLeads > 0 ? totalSpend / totalLeads : 0) : platformData.cpl,
-    [totalSpend, totalLeads, selectedPlatform, platformData.cpl],
+    () => (totalLeads > 0 ? (platformData.cpl > 0 ? platformData.cpl : Math.round(totalSpend / totalLeads)) : 0),
+    [platformData, totalSpend, totalLeads],
   );
 
   const { closedDeals, revenue } = useMemo(
@@ -1160,7 +1105,7 @@ ${currentAgencyNote ? `
                     </tr>
                   </thead>
                   <tbody>
-                    {campaignLeaderboardData[selectedPlatform]?.map((campaign, index) => (
+                    {clientCampaignData[selectedClientId]?.[selectedPlatform]?.map((campaign, index) => (
                       <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td className="py-3 px-4 font-medium text-gray-900">{campaign.name}</td>
                         <td className="py-3 px-4 text-right">{formatInr(campaign.spend)}</td>
