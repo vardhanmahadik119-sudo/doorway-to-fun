@@ -89,43 +89,42 @@ const clients: Client[] = [
   { id: "bluepeak", name: "Blue Peak Fintech", totalSpend: 550000, totalLeads: 220, cpl: 2500 },
 ];
 
-const clientFunnelData: Record<string, { stage: string; count: number; color: string }[]> = {
-  brightline: [
-    { stage: "Total Leads", count: 180, color: "#3b82f6" },
-    { stage: "Contacted",   count: 124, color: "#8b5cf6" },
-    { stage: "Qualified",   count: 68,  color: "#f59e0b" },
-    { stage: "Proposal",    count: 32,  color: "#f97316" },
-    { stage: "Won",         count: 14,  color: "#10b981" },
-  ],
-  vertex: [
-    { stage: "Total Leads", count: 120, color: "#3b82f6" },
-    { stage: "Contacted",   count: 85,  color: "#8b5cf6" },
-    { stage: "Qualified",   count: 45,  color: "#f59e0b" },
-    { stage: "Proposal",    count: 20,  color: "#f97316" },
-    { stage: "Won",         count: 9,   color: "#10b981" },
-  ],
-  northwind: [
-    { stage: "Total Leads", count: 100, color: "#3b82f6" },
-    { stage: "Contacted",   count: 70,  color: "#8b5cf6" },
-    { stage: "Qualified",   count: 38,  color: "#f59e0b" },
-    { stage: "Proposal",    count: 16,  color: "#f97316" },
-    { stage: "Won",         count: 7,   color: "#10b981" },
-  ],
-  harbor: [
-    { stage: "Total Leads", count: 160, color: "#3b82f6" },
-    { stage: "Contacted",   count: 112, color: "#8b5cf6" },
-    { stage: "Qualified",   count: 60,  color: "#f59e0b" },
-    { stage: "Proposal",    count: 24,  color: "#f97316" },
-    { stage: "Won",         count: 11,  color: "#10b981" },
-  ],
-  bluepeak: [
-    { stage: "Total Leads", count: 220, color: "#3b82f6" },
-    { stage: "Contacted",   count: 158, color: "#8b5cf6" },
-    { stage: "Qualified",   count: 88,  color: "#f59e0b" },
-    { stage: "Proposal",    count: 38,  color: "#f97316" },
-    { stage: "Won",         count: 18,  color: "#10b981" },
-  ],
+type FunnelStage = { stage: string; count: number; color: string };
+
+// Conversion rates per stage (each rate is % of the *previous* stage)
+// [contacted, qualified, proposal, won]
+// Platforms differ in lead quality: LinkedIn B2B qualifies better, Google contacts fast,
+// SEO leads are warm, GA leads are softer, Meta drives volume with moderate quality.
+const PLATFORM_FUNNEL_RATES: Partial<Record<Platform, [number, number, number, number]>> = {
+  meta_ads:         [0.72, 0.55, 0.44, 0.42], // high volume, moderate qualify rate
+  google_ads:       [0.82, 0.62, 0.52, 0.46], // high intent → fast contact & conversion
+  linkedin_ads:     [0.68, 0.72, 0.64, 0.54], // smaller pool, very high qualification
+  seo:              [0.76, 0.50, 0.40, 0.38], // warm organic leads, mid-funnel drop-off
+  google_analytics: [0.64, 0.44, 0.34, 0.32], // tracking-based, softer lead quality
 };
+
+// Overall rates per client (hand-tuned to match existing revenue/deal data)
+const CLIENT_OVERALL_RATES: Record<string, [number, number, number, number]> = {
+  brightline: [0.69, 0.55, 0.47, 0.44],
+  vertex:     [0.71, 0.53, 0.44, 0.45],
+  northwind:  [0.70, 0.54, 0.42, 0.44],
+  harbor:     [0.70, 0.54, 0.40, 0.46],
+  bluepeak:   [0.72, 0.56, 0.43, 0.47],
+};
+
+function mkFunnel(total: number, rates: [number, number, number, number]): FunnelStage[] {
+  const contacted = Math.round(total * rates[0]);
+  const qualified = Math.round(contacted * rates[1]);
+  const proposal  = Math.round(qualified * rates[2]);
+  const won       = Math.round(proposal * rates[3]);
+  return [
+    { stage: "Total Leads", count: total,     color: "#3b82f6" },
+    { stage: "Contacted",   count: contacted, color: "#8b5cf6" },
+    { stage: "Qualified",   count: qualified, color: "#f59e0b" },
+    { stage: "Proposal",    count: proposal,  color: "#f97316" },
+    { stage: "Won",         count: won,       color: "#10b981" },
+  ];
+}
 
 const clientRevenueData: Record<string, { closedDeals: number; revenue: number }> = {
   brightline: { closedDeals: 14, revenue: 2100000 },
@@ -292,6 +291,23 @@ const clientCampaignData: Record<string, Record<string, { name: string; spend: n
   },
 };
 
+// ─── Per-client, per-platform lead funnel (derived from clientPlatformData totals) ──
+const clientPlatformFunnelData: Record<string, Record<Platform, FunnelStage[]>> = Object.fromEntries(
+  Object.entries(clientPlatformData).map(([cid, platforms]) => [
+    cid,
+    Object.fromEntries(
+      Object.entries(platforms).map(([plat, d]) => [
+        plat,
+        mkFunnel(
+          d.totalLeads,
+          plat === "overall"
+            ? CLIENT_OVERALL_RATES[cid] ?? [0.70, 0.54, 0.42, 0.44]
+            : PLATFORM_FUNNEL_RATES[plat as Platform] ?? [0.70, 0.52, 0.42, 0.40],
+        ),
+      ])
+    ),
+  ])
+) as Record<string, Record<Platform, FunnelStage[]>>;
 
 // ─── Customise Panel ──────────────────────────────────────────────────────────
 
@@ -532,8 +548,8 @@ const ClientReports = () => {
   );
 
   const funnelData = useMemo(
-    () => clientFunnelData[selectedClientId] ?? clientFunnelData["brightline"],
-    [selectedClientId],
+    () => clientPlatformFunnelData[selectedClientId]?.[selectedPlatform] ?? clientPlatformFunnelData["brightline"]["overall"],
+    [selectedClientId, selectedPlatform],
   );
 
   const currentSettings = useMemo(
