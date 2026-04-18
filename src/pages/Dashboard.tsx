@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -17,8 +17,6 @@ import {
 } from "recharts";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp,
   TrendingDown,
@@ -29,75 +27,198 @@ import {
   Clock,
   LayoutGrid,
   Filter,
+  CalendarRange,
 } from "lucide-react";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Revenue data per period ──────────────────────────────────────────────────
 
-const revenueData = [
-  { month: "Apr", revenue: 1850000, target: 2000000 },
-  { month: "May", revenue: 2100000, target: 2100000 },
-  { month: "Jun", revenue: 1980000, target: 2200000 },
-  { month: "Jul", revenue: 2350000, target: 2300000 },
-  { month: "Aug", revenue: 2600000, target: 2400000 },
-  { month: "Sep", revenue: 2450000, target: 2500000 },
-  { month: "Oct", revenue: 2800000, target: 2600000 },
-  { month: "Nov", revenue: 3100000, target: 2800000 },
-  { month: "Dec", revenue: 3350000, target: 3000000 },
-  { month: "Jan", revenue: 3200000, target: 3200000 },
-  { month: "Feb", revenue: 3580000, target: 3400000 },
-  { month: "Mar", revenue: 4280000, target: 3600000 },
+const weekRevenueData = [
+  { label: "Mon", revenue: 142000, target: 150000 },
+  { label: "Tue", revenue: 168000, target: 150000 },
+  { label: "Wed", revenue: 135000, target: 150000 },
+  { label: "Thu", revenue: 192000, target: 150000 },
+  { label: "Fri", revenue: 215000, target: 160000 },
+  { label: "Sat", revenue: 94000, target: 90000 },
+  { label: "Sun", revenue: 63000, target: 90000 },
 ];
 
-const invoiceStats = [
-  { label: "Invoices Sent", amount: 4280000, icon: IndianRupee, color: "blue", trend: "+18%", trendUp: true },
-  { label: "Invoices Paid", amount: 3520000, icon: CheckCircle2, color: "green", trend: "+22%", trendUp: true },
-  { label: "Invoices Overdue", amount: 435000, icon: AlertCircle, color: "red", trend: "-5%", trendUp: false },
+const monthRevenueData = [
+  { label: "Week 1", revenue: 820000, target: 880000 },
+  { label: "Week 2", revenue: 975000, target: 920000 },
+  { label: "Week 3", revenue: 1120000, target: 980000 },
+  { label: "Week 4", revenue: 1365000, target: 1050000 },
 ];
 
-const pipelineStages = [
-  { name: "Lead", deals: 18, value: 4250000, conversion: 61, fill: "#3b82f6" },
-  { name: "Proposal Sent", deals: 11, value: 2600000, conversion: 72, fill: "#8b5cf6" },
-  { name: "Negotiating", deals: 8, value: 1875000, conversion: 75, fill: "#f59e0b" },
-  { name: "Closed Won", deals: 6, value: 1410000, conversion: null, fill: "#10b981" },
-  { name: "Closed Lost", deals: 4, value: 940000, conversion: null, fill: "#ef4444" },
+const quarterRevenueData = [
+  { label: "Jan", revenue: 3200000, target: 3200000 },
+  { label: "Feb", revenue: 3580000, target: 3400000 },
+  { label: "Mar", revenue: 4280000, target: 3600000 },
 ];
+
+// ─── Invoice stats per period ─────────────────────────────────────────────────
+
+const invoiceStatsByPeriod = {
+  week: [
+    { label: "Invoices Sent", amount: 1009000, color: "blue", trend: "+12%", trendUp: true },
+    { label: "Invoices Paid", amount: 830000, color: "green", trend: "+15%", trendUp: true },
+    { label: "Invoices Overdue", amount: 88000, color: "red", trend: "-3%", trendUp: false },
+  ],
+  month: [
+    { label: "Invoices Sent", amount: 4280000, color: "blue", trend: "+18%", trendUp: true },
+    { label: "Invoices Paid", amount: 3520000, color: "green", trend: "+22%", trendUp: true },
+    { label: "Invoices Overdue", amount: 435000, color: "red", trend: "-5%", trendUp: false },
+  ],
+  quarter: [
+    { label: "Invoices Sent", amount: 11060000, color: "blue", trend: "+24%", trendUp: true },
+    { label: "Invoices Paid", amount: 9350000, color: "green", trend: "+28%", trendUp: true },
+    { label: "Invoices Overdue", amount: 980000, color: "red", trend: "-8%", trendUp: false },
+  ],
+};
+
+// ─── Pipeline data per period ─────────────────────────────────────────────────
+
+const pipelineByPeriod = {
+  week: [
+    { name: "Lead", deals: 5, value: 1180000, conversion: 60, fill: "#3b82f6" },
+    { name: "Proposal Sent", deals: 3, value: 710000, conversion: 66, fill: "#8b5cf6" },
+    { name: "Negotiating", deals: 2, value: 470000, conversion: 50, fill: "#f59e0b" },
+    { name: "Closed Won", deals: 1, value: 235000, conversion: null, fill: "#10b981" },
+    { name: "Closed Lost", deals: 1, value: 235000, conversion: null, fill: "#ef4444" },
+  ],
+  month: [
+    { name: "Lead", deals: 18, value: 4250000, conversion: 61, fill: "#3b82f6" },
+    { name: "Proposal Sent", deals: 11, value: 2600000, conversion: 72, fill: "#8b5cf6" },
+    { name: "Negotiating", deals: 8, value: 1875000, conversion: 75, fill: "#f59e0b" },
+    { name: "Closed Won", deals: 6, value: 1410000, conversion: null, fill: "#10b981" },
+    { name: "Closed Lost", deals: 4, value: 940000, conversion: null, fill: "#ef4444" },
+  ],
+  quarter: [
+    { name: "Lead", deals: 52, value: 12200000, conversion: 63, fill: "#3b82f6" },
+    { name: "Proposal Sent", deals: 33, value: 7700000, conversion: 75, fill: "#8b5cf6" },
+    { name: "Negotiating", deals: 24, value: 5640000, conversion: 79, fill: "#f59e0b" },
+    { name: "Closed Won", deals: 19, value: 4460000, conversion: null, fill: "#10b981" },
+    { name: "Closed Lost", deals: 9, value: 2120000, conversion: null, fill: "#ef4444" },
+  ],
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const formatInr = (n: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(n);
+
+const formatInrFull = (n: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(n);
+
+// Deterministic pseudo-random based on seed
+function seededRand(seed: number, min: number, max: number) {
+  const x = Math.sin(seed + 1) * 10000;
+  return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min;
+}
+
+function generateCustomData(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) return [];
+  const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000);
+
+  if (daysDiff <= 14) {
+    const data = [];
+    for (let i = 0; i <= daysDiff; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const seed = d.getDate() * 7 + d.getMonth() * 31 + i;
+      data.push({
+        label: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+        revenue: seededRand(seed, 80000, 240000),
+        target: 140000 + i * 3000,
+      });
+    }
+    return data;
+  } else if (daysDiff <= 90) {
+    const weeks = Math.ceil(daysDiff / 7);
+    const data = [];
+    for (let i = 0; i < weeks; i++) {
+      const ws = new Date(startDate);
+      ws.setDate(ws.getDate() + i * 7);
+      const seed = ws.getDate() + ws.getMonth() * 5 + i * 3;
+      data.push({
+        label: `W${i + 1} ${ws.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`,
+        revenue: seededRand(seed, 700000, 1600000),
+        target: 900000 + i * 40000,
+      });
+    }
+    return data;
+  } else {
+    const data = [];
+    const cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (cur <= endDate) {
+      const seed = cur.getMonth() * 13 + cur.getFullYear();
+      data.push({
+        label: cur.toLocaleDateString("en-IN", { month: "short", year: "2-digit" }),
+        revenue: seededRand(seed, 2200000, 4800000),
+        target: 2800000 + data.length * 120000,
+      });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    return data;
+  }
+}
+
+function generateCustomInvoiceStats(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return invoiceStatsByPeriod.month;
+  const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+  const scale = daysDiff / 30;
+  return [
+    { label: "Invoices Sent", amount: Math.round(4280000 * scale), color: "blue", trend: "+18%", trendUp: true },
+    { label: "Invoices Paid", amount: Math.round(3520000 * scale), color: "green", trend: "+22%", trendUp: true },
+    { label: "Invoices Overdue", amount: Math.round(435000 * scale), color: "red", trend: "-5%", trendUp: false },
+  ];
+}
+
+function generateCustomPipeline(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return pipelineByPeriod.month;
+  const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+  const scale = daysDiff / 30;
+  return pipelineByPeriod.month.map((s) => ({
+    ...s,
+    deals: Math.max(1, Math.round(s.deals * scale)),
+    value: Math.round(s.value * scale),
+  }));
+}
+
+const healthConfig = {
+  Healthy: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  "At Risk": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  Critical: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
+};
+
+const kanbanColors: Record<string, string> = {
+  Lead: "#3b82f6",
+  "Proposal Sent": "#8b5cf6",
+  Negotiating: "#f59e0b",
+  "Closed Won": "#10b981",
+  "Closed Lost": "#ef4444",
+};
 
 const clientHealthData = [
-  {
-    name: "BrightStar Media",
-    manager: "Priya Sharma",
-    completed: 24,
-    pending: 3,
-    health: "Healthy" as const,
-  },
-  {
-    name: "PixelForge Studios",
-    manager: "Rahul Mehta",
-    completed: 18,
-    pending: 7,
-    health: "At Risk" as const,
-  },
-  {
-    name: "Zenith Brands",
-    manager: "Ananya Iyer",
-    completed: 31,
-    pending: 2,
-    health: "Healthy" as const,
-  },
-  {
-    name: "Crescendo Digital",
-    manager: "Vikram Nair",
-    completed: 9,
-    pending: 12,
-    health: "Critical" as const,
-  },
-  {
-    name: "NovaAd Co.",
-    manager: "Deepika Rao",
-    completed: 22,
-    pending: 4,
-    health: "Healthy" as const,
-  },
+  { name: "BrightStar Media", manager: "Priya Sharma", completed: 24, pending: 3, health: "Healthy" as const },
+  { name: "PixelForge Studios", manager: "Rahul Mehta", completed: 18, pending: 7, health: "At Risk" as const },
+  { name: "Zenith Brands", manager: "Ananya Iyer", completed: 31, pending: 2, health: "Healthy" as const },
+  { name: "Crescendo Digital", manager: "Vikram Nair", completed: 9, pending: 12, health: "Critical" as const },
+  { name: "NovaAd Co.", manager: "Deepika Rao", completed: 22, pending: 4, health: "Healthy" as const },
 ];
 
 const kanbanDeals: Record<string, { client: string; value: number }[]> = {
@@ -124,37 +245,6 @@ const kanbanDeals: Record<string, { client: string; value: number }[]> = {
   ],
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const formatInr = (n: number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(n);
-
-const formatInrFull = (n: number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(n);
-
-const healthConfig = {
-  Healthy: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
-  "At Risk": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
-  Critical: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
-};
-
-const kanbanColors: Record<string, string> = {
-  Lead: "#3b82f6",
-  "Proposal Sent": "#8b5cf6",
-  Negotiating: "#f59e0b",
-  "Closed Won": "#10b981",
-  "Closed Lost": "#ef4444",
-};
-
 type DateFilter = "week" | "month" | "quarter" | "custom";
 type ChartType = "line" | "bar";
 type PipelineView = "funnel" | "kanban";
@@ -166,67 +256,140 @@ const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState<DateFilter>("month");
   const [pipelineView, setPipelineView] = useState<PipelineView>("funnel");
 
+  // Custom range state
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [appliedStart, setAppliedStart] = useState("");
+  const [appliedEnd, setAppliedEnd] = useState("");
+
+  const isCustomApplied = dateFilter === "custom" && appliedStart && appliedEnd;
+
+  const chartData = useMemo(() => {
+    if (dateFilter === "week") return weekRevenueData;
+    if (dateFilter === "month") return monthRevenueData;
+    if (dateFilter === "quarter") return quarterRevenueData;
+    if (isCustomApplied) return generateCustomData(appliedStart, appliedEnd);
+    return monthRevenueData;
+  }, [dateFilter, isCustomApplied, appliedStart, appliedEnd]);
+
+  const invoiceStats = useMemo(() => {
+    if (dateFilter === "week") return invoiceStatsByPeriod.week;
+    if (dateFilter === "month") return invoiceStatsByPeriod.month;
+    if (dateFilter === "quarter") return invoiceStatsByPeriod.quarter;
+    if (isCustomApplied) return generateCustomInvoiceStats(appliedStart, appliedEnd);
+    return invoiceStatsByPeriod.month;
+  }, [dateFilter, isCustomApplied, appliedStart, appliedEnd]);
+
+  const pipelineStages = useMemo(() => {
+    if (dateFilter === "week") return pipelineByPeriod.week;
+    if (dateFilter === "month") return pipelineByPeriod.month;
+    if (dateFilter === "quarter") return pipelineByPeriod.quarter;
+    if (isCustomApplied) return generateCustomPipeline(appliedStart, appliedEnd);
+    return pipelineByPeriod.month;
+  }, [dateFilter, isCustomApplied, appliedStart, appliedEnd]);
+
   const funnelData = pipelineStages.map((s) => ({
     value: s.deals,
     name: s.name,
     fill: s.fill,
   }));
 
+  function handleApplyCustom() {
+    if (customStart && customEnd && new Date(customEnd) >= new Date(customStart)) {
+      setAppliedStart(customStart);
+      setAppliedEnd(customEnd);
+    }
+  }
+
+  const customRangeLabel =
+    isCustomApplied
+      ? `${new Date(appliedStart).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – ${new Date(appliedEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
+      : null;
+
   return (
     <DashboardLayout>
       <div className="max-w-[1400px] space-y-8 pb-12">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Founder dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">Revenue, pipeline, and client health at a glance</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Chart toggle */}
-            <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
-              <button
-                onClick={() => setChartType("line")}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  chartType === "line" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                Line
-              </button>
-              <button
-                onClick={() => setChartType("bar")}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  chartType === "bar" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                Bar
-              </button>
-            </div>
-
-            {/* Date filters */}
-            <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
-              {(["week", "month", "quarter"] as DateFilter[]).map((f) => (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Chart toggle */}
+              <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
                 <button
-                  key={f}
-                  onClick={() => setDateFilter(f)}
-                  className={`px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                    dateFilter === f ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                  onClick={() => setChartType("line")}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    chartType === "line" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  {f === "week" ? "This week" : f === "month" ? "This month" : "This quarter"}
+                  Line
                 </button>
-              ))}
-              <button
-                onClick={() => setDateFilter("custom")}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1 ${
-                  dateFilter === "custom" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Filter className="h-3 w-3" />
-                Custom
-              </button>
+                <button
+                  onClick={() => setChartType("bar")}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    chartType === "bar" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Bar
+                </button>
+              </div>
+
+              {/* Date filters */}
+              <div className="flex items-center rounded-lg border border-gray-200 bg-white overflow-hidden">
+                {(["week", "month", "quarter"] as DateFilter[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setDateFilter(f)}
+                    className={`px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+                      dateFilter === f ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {f === "week" ? "This week" : f === "month" ? "This month" : "Quarterly"}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setDateFilter("custom")}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1 ${
+                    dateFilter === "custom" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <CalendarRange className="h-3.5 w-3.5" />
+                  Custom
+                </button>
+              </div>
             </div>
+
+            {/* Custom date range picker */}
+            {dateFilter === "custom" && (
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="text-sm text-gray-700 outline-none border-none bg-transparent cursor-pointer"
+                />
+                <span className="text-gray-400 text-sm">—</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  min={customStart}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="text-sm text-gray-700 outline-none border-none bg-transparent cursor-pointer"
+                />
+                <button
+                  onClick={handleApplyCustom}
+                  disabled={!customStart || !customEnd || new Date(customEnd) < new Date(customStart)}
+                  className="ml-1 px-3 py-1 text-xs font-semibold bg-gray-900 text-white rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -234,7 +397,12 @@ const Dashboard = () => {
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-gray-900">Revenue overview</CardTitle>
+              <div>
+                <CardTitle className="text-base font-semibold text-gray-900">Revenue overview</CardTitle>
+                {customRangeLabel && (
+                  <p className="text-xs text-gray-500 mt-0.5">{customRangeLabel}</p>
+                )}
+              </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                 <span className="text-xs text-gray-500 mr-3">Actual</span>
@@ -244,57 +412,64 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                {chartType === "line" ? (
-                  <LineChart data={revenueData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => formatInr(v)}
-                    />
-                    <Tooltip formatter={(v: number) => [formatInrFull(v)]} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#10b981"
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 5 }}
-                      name="Revenue"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="target"
-                      stroke="#d1d5db"
-                      strokeWidth={1.5}
-                      strokeDasharray="5 5"
-                      dot={false}
-                      name="Target"
-                    />
-                  </LineChart>
-                ) : (
-                  <BarChart data={revenueData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => formatInr(v)}
-                    />
-                    <Tooltip formatter={(v: number) => [formatInrFull(v)]} />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={36} name="Revenue" />
-                    <Bar dataKey="target" fill="#e5e7eb" radius={[4, 4, 0, 0]} maxBarSize={36} name="Target" />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            </div>
+            {dateFilter === "custom" && !isCustomApplied ? (
+              <div className="h-72 flex flex-col items-center justify-center gap-2 text-gray-400">
+                <CalendarRange className="h-8 w-8 text-gray-300" />
+                <p className="text-sm">Select a date range above and press <span className="font-semibold text-gray-600">Apply</span></p>
+              </div>
+            ) : (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartType === "line" ? (
+                    <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => formatInr(v)}
+                      />
+                      <Tooltip formatter={(v: number) => [formatInrFull(v)]} />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        dot={false}
+                        activeDot={{ r: 5 }}
+                        name="Revenue"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="target"
+                        stroke="#d1d5db"
+                        strokeWidth={1.5}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        name="Target"
+                      />
+                    </LineChart>
+                  ) : (
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => formatInr(v)}
+                      />
+                      <Tooltip formatter={(v: number) => [formatInrFull(v)]} />
+                      <Legend />
+                      <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={36} name="Revenue" />
+                      <Bar dataKey="target" fill="#e5e7eb" radius={[4, 4, 0, 0]} maxBarSize={36} name="Target" />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            )}
 
             {/* Invoice stat cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
@@ -309,15 +484,13 @@ const Dashboard = () => {
                           : "bg-red-50"
                     }`}
                   >
-                    <stat.icon
-                      className={`h-5 w-5 ${
-                        stat.color === "blue"
-                          ? "text-blue-600"
-                          : stat.color === "green"
-                            ? "text-emerald-600"
-                            : "text-red-500"
-                      }`}
-                    />
+                    {stat.color === "blue" ? (
+                      <IndianRupee className="h-5 w-5 text-blue-600" />
+                    ) : stat.color === "green" ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">{stat.label}</p>
@@ -378,27 +551,33 @@ const Dashboard = () => {
                   <CardTitle className="text-sm font-semibold text-gray-700">Deal funnel</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <FunnelChart>
-                        <Tooltip
-                          formatter={(value: number, name: string) => [`${value} deals`, name]}
-                        />
-                        <Funnel dataKey="value" data={funnelData} isAnimationActive>
-                          {funnelData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                          <LabelList
-                            position="right"
-                            fill="#374151"
-                            stroke="none"
-                            dataKey="name"
-                            style={{ fontSize: 12, fontWeight: 500 }}
+                  {dateFilter === "custom" && !isCustomApplied ? (
+                    <div className="h-72 flex items-center justify-center text-sm text-gray-400">
+                      Apply a date range to see data
+                    </div>
+                  ) : (
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <FunnelChart>
+                          <Tooltip
+                            formatter={(value: number, name: string) => [`${value} deals`, name]}
                           />
-                        </Funnel>
-                      </FunnelChart>
-                    </ResponsiveContainer>
-                  </div>
+                          <Funnel dataKey="value" data={funnelData} isAnimationActive>
+                            {funnelData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                            <LabelList
+                              position="right"
+                              fill="#374151"
+                              stroke="none"
+                              dataKey="name"
+                              style={{ fontSize: 12, fontWeight: 500 }}
+                            />
+                          </Funnel>
+                        </FunnelChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -426,7 +605,7 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {pipelineStages.map((stage, i) => (
+                      {(dateFilter === "custom" && !isCustomApplied ? pipelineByPeriod.month : pipelineStages).map((stage, i) => (
                         <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                           <td className="py-3 px-6">
                             <div className="flex items-center gap-2.5">
